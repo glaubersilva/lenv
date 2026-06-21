@@ -1,0 +1,23 @@
+#!/usr/bin/env php
+<?php
+
+require __DIR__ . '/helpers.php';
+
+$command     = $argv[1] ?? 'help';
+$commandFile = __DIR__ . '/commands/' . $command . '.php';
+
+if ($command === 'help' || $command === '--help' || !file_exists($commandFile)) {
+    if ($command !== 'help' && $command !== '--help') {
+        echo "\nError: Unknown command '{$command}'\n";
+    }
+    echo "\nUsage: lenv <command> [project-folder]\n\n";
+    echo "Commands:\n";
+    echo "  new               Create a new Lando environment interactively\n";
+    echo "  rebuild [folder]  Rebuild a project from the latest templates\n";
+    echo "  update [folder]   Change environment settings (PHP, database, webserver, Xdebug)\n\n";
+    echo "If [folder] is omitted, the command runs on the current directory\n";
+    echo "if it is a recognised lenv project.\n\n";
+    exit($command === 'help' || $command === '--help' ? 0 : 1);
+}
+
+require $commandFile;

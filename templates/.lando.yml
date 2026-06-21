@@ -1,0 +1,76 @@
+name: __PROJECT_NAME__
+recipe: wordpress
+
+config:
+  webroot: .
+  php: '8.3'
+  database: mysql:8.0
+  xdebug: debug
+
+proxy:
+  mailhog:
+    - mailhog.__PROJECT_NAME__.lndo.site:80
+  phpmyadmin:
+    - phpmyadmin.__PROJECT_NAME__.lndo.site:80
+
+services:
+  database:
+    creds:
+      user: admin
+      password: admin
+      database: wordpress
+
+  appserver:
+    run:
+      # Configure GitHub token for Composer private packages
+      - composer config -g github-oauth.github.com "$GITHUB_TOKEN" || true
+    overrides:
+      environment:
+        # Must match the server name configured in PhpStorm (Settings > PHP > Servers)
+        PHP_IDE_CONFIG: "serverName=__PROJECT_NAME__"
+        # GitHub token for Composer private packages — set GITHUB_TOKEN in your shell profile
+        GITHUB_TOKEN: ${GITHUB_TOKEN}
+      volumes:
+        - ./.lando/php.ini:/usr/local/etc/php/conf.d/zzzz-lando-xdebug.ini
+
+  # Email capture (replaces real SMTP in dev)
+  mailhog:
+    type: mailhog
+    hogfrom:
+      - appserver
+
+  # Database manager
+  phpmyadmin:
+    type: phpmyadmin
+    hosts:
+      - database
+
+tooling:
+  # lando composer <command> — runs inside the container (correct PHP + extensions)
+  composer:
+    service: appserver
+    cmd: composer
+    user: root
+    env:
+      XDEBUG_MODE: "off"
+
+  # lando wp <command>
+  wp:
+    service: appserver
+    cmd: wp --allow-root
+
+  # Run once after the first `lando start`
+  # NOTE: do NOT name this "setup" — that is a reserved Lando command
+  install:
+    service: appserver
+    description: Download WordPress and run initial install
+    cmd:
+      - wp core download --allow-root --path=/app
+      - wp config create --allow-root --path=/app --dbname=wordpress --dbuser=admin --dbpass=admin --dbhost=database --force
+      - wp core install --allow-root --path=/app --url=https://__PROJECT_NAME__.lndo.site --title="__PROJECT_NAME__ Dev" --admin_user=admin --admin_password=admin --admin_email=dev@lndo.site --skip-email
+      - wp rewrite structure --allow-root --path=/app '/%postname%/'
+      - mysql -uroot -h database -e "CREATE DATABASE IF NOT EXISTS wordpress_tests; GRANT ALL PRIVILEGES ON wordpress_tests.* TO 'admin'@'%'; FLUSH PRIVILEGES;"
+      - wp config set WP_DEBUG true --raw --allow-root --path=/app
+      - wp config set WP_DEBUG_LOG true --raw --allow-root --path=/app
+      - wp config set WP_DEBUG_DISPLAY false --raw --allow-root --path=/app
+      - wp config set SCRIPT_DEBUG false --raw --allow-root --path=/app
