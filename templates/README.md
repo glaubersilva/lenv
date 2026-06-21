@@ -162,6 +162,93 @@ __PROJECT_NAME__/
 
 ## Troubleshooting
 
+> **Windows + WSL2:** Most issues below are specific to running Lando inside WSL2 with Docker Desktop on Windows. This combination is [officially supported by Lando](https://docs.lando.dev/install/wsl.html), but WSL2 ↔ Windows interop is fragile — especially after Docker Desktop or Windows updates. macOS users can skip the WSL-specific sections.
+
+---
+
+### `Could not automatically start Docker` but Docker Desktop is running
+
+This is one of the **most common Lando + WSL2 problems**. Docker Desktop may show containers running normally while `lando start` fails with:
+
+```
+WSL ERROR: UtilAcceptVsock:273: accept4 failed 110
+setup-build-engine FAILED
+Could not automatically start Docker. Please manually start it to continue.
+```
+
+**What is actually happening:** `lando start` runs two separate phases:
+
+1. **Lando internal setup** — installs/updates the build engine, development CA, and Landonet. On WSL2 this requires WSL ↔ Windows communication (vsock).
+2. **Start app containers** — only runs if phase 1 succeeds.
+
+When phase 1 fails, Lando reports that Docker is not running — even though `docker info` works fine from the same terminal and other containers are already up. **Docker is OK; Lando setup failed.**
+
+#### Common causes
+
+| Cause | Why it happens |
+|---|---|
+| WSL2 vsock timeout | Temporary loss of WSL ↔ Windows connectivity (`accept4 failed 110` = connection timed out) |
+| Lando / Docker Desktop version mismatch | After a Docker Desktop update, Lando tries to reinstall the build engine and the download fails |
+| WSL integration disabled | Docker Desktop reset integration settings after an update — Docker works from the GUI but WSL interop breaks |
+| Stale Docker networks/containers | Interrupted `lando start` left orphan state from a previous WSL crash |
+
+#### Quick fix (try in order)
+
+**Step 1 — Clean up and sync versions** (from the project directory):
+
+```bash
+rm -f *.exe          # remove partial build-engine downloads (see section below)
+lando update
+lando start
+```
+
+**Step 2 — Reset WSL** (run in **PowerShell or CMD on Windows**, not inside WSL):
+
+```powershell
+wsl --shutdown
+```
+
+Wait a few seconds, reopen your WSL terminal, confirm Docker responds:
+
+```bash
+docker info
+```
+
+Then run `lando start` again.
+
+**Step 3 — Prune stale Docker networks:**
+
+```bash
+docker network prune -f
+lando start
+```
+
+**Step 4 — Verify Docker Desktop WSL integration:**
+
+Docker Desktop → **Settings** → **Resources** → **WSL Integration** → enable **Ubuntu** → **Apply & Restart**
+
+Then from WSL:
+
+```bash
+docker info
+lando start
+```
+
+**Step 5 — If it still fails**, run setup in debug mode and check the [Lando logs docs](https://docs.lando.dev/help/logs.html):
+
+```bash
+lando setup -vvv
+```
+
+#### References
+
+- [Lando on WSL — official install guide](https://docs.lando.dev/install/wsl.html)
+- [Lando build engine on WSL (lando/core#308)](https://github.com/lando/core/issues/308) — explains why Lando installs a build engine on WSL and the `setup-build-engine` step
+- [Could not automatically start Docker on WSL2 (lando/lando#3604)](https://github.com/lando/lando/issues/3604) — same misleading error with Docker actually running
+- [UtilAcceptVsock / WSL interop failures (lando/core#315)](https://github.com/lando/core/issues/315) — WSL2 connectivity issues during Lando setup
+
+---
+
 ### Keep Lando and Docker Desktop in sync
 
 Lando and Docker Desktop must be kept up to date together. When Docker Desktop updates but Lando does not, Lando may fail to detect Docker, fail to install its build engine, or hang indefinitely on startup.
@@ -178,6 +265,8 @@ Signs of a version mismatch during `lando start`:
 - `WSL ERROR: UtilAcceptVsock: accept4 failed`
 - Lando hanging after the proxy container starts
 
+See also: [`Could not automatically start Docker` but Docker Desktop is running](#could-not-automatically-start-docker-but-docker-desktop-is-running) above.
+
 ---
 
 ### Random `.exe` files appearing in the project directory
@@ -188,24 +277,20 @@ Symptom: after a failed `lando start`, files with random names and `.exe` extens
 
 ```
 hDR32oQ_MSGxN4nlYtsHe.exe   (~500 MB)
-VOJeMiZZO8n9SK4HqNk3E.exe   (~500 MB)
+K58YAZfWBRjnr_zB_06NR.exe   (~500 MB)
 ```
 
-**Cause:** When Lando fails to install its build engine (triggered by the `UtilAcceptVsock` / `setup-build-engine FAILED` error), it leaves behind the partial download as a temp file in the current working directory. Each failed `lando start` attempt creates a new orphan file. They are identical binaries — the same Windows `.exe` downloaded repeatedly.
+**What they are:** Lando downloads a Windows build engine binary (~500 MB) during its internal setup step (`setup-build-engine`). When the download fails — usually due to the WSL `UtilAcceptVsock` error described above — the partial file is left in the **current working directory** (your project folder). Each failed attempt creates another orphan file with a random name. They are identical copies of the same binary, not malware.
 
-These files are harmless but are a clear signal that `setup-build-engine` is failing, usually because Lando and Docker Desktop are out of sync.
+**They are harmless** but are a clear signal that `setup-build-engine` is failing. Do not commit them — add `*.exe` to `.gitignore` if needed.
 
 **Clean up:**
+
 ```bash
-rm *.exe
+rm -f *.exe
 ```
 
-**Fix the underlying cause:**
-```bash
-lando update
-```
-
-Then run `lando start` again. If the build engine installs successfully, no more `.exe` files will be left behind.
+**Fix the underlying cause:** follow the [quick fix steps](#quick-fix-try-in-order) above, starting with `lando update` and `wsl --shutdown`.
 
 ---
 
@@ -255,8 +340,8 @@ Error response from daemon: failed to set up container networking: network <id> 
 
 **Fix:**
 
-1. Shut down WSL to reset the connection:
-```bash
+1. Shut down WSL to reset the connection (**PowerShell/CMD on Windows**):
+```powershell
 wsl --shutdown
 ```
 
@@ -271,13 +356,20 @@ docker rm -f $(docker ps -aq) 2>/dev/null || true
 docker network prune -f
 ```
 
-4. Run `lando start` again.
+4. Clean up any orphan `.exe` files in the project directory:
+```bash
+rm -f *.exe
+```
 
-> Note: `docker rm -f $(docker ps -aq)` removes **all** stopped containers. If you have containers from other projects you want to keep, remove only the specific ones (e.g. `hacker_appserver_1`, `hacker_database_1`, etc. and `landoproxyhyperion5000gandalfedition_proxy_1`).
+5. Run `lando update`, then `lando start` again.
+
+> Note: `docker rm -f $(docker ps -aq)` removes **all** containers. If you have containers from other projects you want to keep, remove only the specific ones (e.g. `mysite_appserver_1`, `mysite_database_1`, and `landoproxyhyperion5000gandalfedition_proxy_1`).
+
+---
 
 ### Docker Desktop WSL integration not working
 
-Symptom: `lando start` fails with `Could not automatically start Docker` or `failed to connect to the docker API at unix:///var/run/docker.sock`, even though Docker Desktop is open.
+Symptom: `lando start` fails with `Could not automatically start Docker` or `failed to connect to the docker API at unix:///var/run/docker.sock`, even though Docker Desktop is open and shows running containers.
 
 **Cause:** Docker Desktop and Windows updates are known to silently reset WSL integration settings. After an update, the integration with your WSL distro may be disabled without warning.
 
