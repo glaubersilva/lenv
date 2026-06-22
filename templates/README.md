@@ -58,6 +58,23 @@ Open https://__PROJECT_NAME__.lndo.site — it should load with the default Word
 ```bash
 cd wp-content/plugins
 git clone <repo-url> <folder-name>
+cd <folder-name>
+```
+
+Install PHP dependencies with **`lando composer`** (inside the container), not the host's `composer`:
+
+```bash
+lando composer install
+```
+
+> **Always use `lando composer`.** Many plugin test suites require PHP extensions (e.g. `uopz`) that lenv installs in the container but are usually missing on the host. Running `composer install` on the host can fail with missing extensions, Git "dubious ownership" errors on WSL, or the wrong PHP version.
+
+If the repo uses Git submodules or has nested packages (e.g. a `common/` folder with its own `composer.json`), install in each directory:
+
+```bash
+git submodule update --init --recursive   # only if the repo uses submodules
+cd common && lando composer install && cd ..
+lando composer install
 ```
 
 **5. Activate plugins/themes:**

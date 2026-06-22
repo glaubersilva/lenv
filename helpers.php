@@ -220,7 +220,7 @@ function sync_lando_scripts(string $projectDir): void
         mkdir($projectDir . '/.lando', 0755, true);
     }
 
-    foreach (['install-wp-config-https.php', 'ensure-db-creds.sh', 'xdebug-on.sh', 'xdebug-off.sh'] as $script) {
+    foreach (['install-wp-config-https.php', 'ensure-db-creds.sh', 'ensure-dev-extensions.sh', 'xdebug-on.sh', 'xdebug-off.sh'] as $script) {
         copy(TEMPLATE_DIR . '/.lando/' . $script, $projectDir . '/.lando/' . $script);
     }
 }
@@ -285,9 +285,16 @@ function abort(string $message): void
 
 function resolve_lenv_project(?string $folder, string $usage): array
 {
+    $current = detect_current_project();
+
     if ($folder) {
         if (!validate_folder_name($folder)) {
             abort("Invalid folder name: {$folder}");
+        }
+
+        // Already inside the project folder — `lenv rebuild mysite.lndo.site` from that directory.
+        if ($current && $current['folder'] === $folder) {
+            return ['dir' => $current['dir'], 'folder' => $folder];
         }
 
         $projectDir = get_project_dir($folder);
@@ -298,7 +305,6 @@ function resolve_lenv_project(?string $folder, string $usage): array
         return ['dir' => realpath($projectDir), 'folder' => $folder];
     }
 
-    $current = detect_current_project();
     if (!$current) {
         abort("No project specified and not inside a project folder.\n  Usage: {$usage}");
     }
@@ -494,7 +500,7 @@ function get_powershell_status(): array
 
     $result = run_host_command(
         'powershell.exe -NoProfile -Command ' . escapeshellarg('$PSVersionTable.PSVersion.ToString()'),
-        5
+        15
     );
     if ($result['exit'] !== 0) {
         $detail = trim($result['output']) ?: 'powershell.exe failed to run';
@@ -563,6 +569,11 @@ function run_lando_doctor_checks(?array $project = null): int
         print_doctor_check('PowerShell', $powershell['ok'], $powershell['detail']);
         if (!$powershell['ok']) {
             $issues++;
+            if ($docker['ok']) {
+                echo "  ℹ Note: Docker CLI works and containers may still be running, but Lando\n";
+                echo "    commands that run setup (lando rebuild, lando info, …) will fail with\n";
+                echo "    \"Could not automatically start Docker\" until PowerShell interop is fixed.\n";
+            }
         }
 
         $wslvar = get_wslvar_status();

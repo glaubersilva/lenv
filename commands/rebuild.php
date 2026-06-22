@@ -13,6 +13,7 @@ echo "Always overwritten from templates:\n";
 echo "  ✔  .lando.yml       — full template; reapplies name, PHP, database, webserver, xdebug\n";
 echo "  ✔  .lando/php.ini   — full template\n";
 echo "  ✔  .lando/xdebug-*.sh — runtime Xdebug toggle scripts\n";
+echo "  ✔  .lando/ensure-dev-extensions.sh — uopz + Git safe.directory\n";
 if (is_frankenphp_webserver($values['via'])) {
     echo "  ✔  docker/          — FrankenPHP Dockerfile, Caddyfile, entrypoint\n";
 }
@@ -38,12 +39,15 @@ echo "  ✔ .lando.yml\n";
 echo "  ✔ .lando/php.ini\n";
 echo "  ✔ .lando/xdebug-on.sh\n";
 echo "  ✔ .lando/xdebug-off.sh\n";
+echo "  ✔ .lando/ensure-dev-extensions.sh\n";
 if (is_frankenphp_webserver($values['via'])) {
     echo "  ✔ docker/\n";
 }
 
 if (is_dir(TEMPLATE_DIR . '/docs')) {
-    mkdir($projectDir . '/docs', 0755, true);
+    if (!is_dir($projectDir . '/docs')) {
+        mkdir($projectDir . '/docs', 0755, true);
+    }
     foreach (glob(TEMPLATE_DIR . '/docs/*.md') as $doc) {
         $content = apply_template(
             file_get_contents($doc),

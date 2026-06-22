@@ -19,6 +19,7 @@ Every project created by `lenv new` is a self-contained Lando stack:
 | **Xdebug** | Off by default; enable with `lenv update` or `lenv xdebug on` |
 | **IDE integration** | `PHP_IDE_CONFIG` and path mappings pre-configured for PhpStorm / VS Code |
 | **WP-CLI & Composer** | `lando wp` and `lando composer` run inside the container with the project's PHP version |
+| **Dev PHP extensions** | `uopz` (for plugin test suites) installed automatically; Git `safe.directory` configured for WSL bind mounts |
 | **Diagnostic pages** | `lenv-phpinfo.php` and `lenv-xdebuginfo.php` in the project root |
 | **Project docs** | `README.md` with URLs and credentials; `docs/troubleshooting.md`, `docs/xdebug.md`, and `docs/environment.md` |
 

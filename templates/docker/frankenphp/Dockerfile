@@ -14,6 +14,7 @@ RUN apk upgrade --no-cache && \
         mysqli \
         opcache \
         pdo_mysql \
+        uopz \
         zip
 
 FROM base AS dev

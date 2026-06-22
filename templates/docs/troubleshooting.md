@@ -70,6 +70,47 @@ If the script is missing from an older project, run `lenv rebuild` to sync `.lan
 
 ---
 
+## `composer install` fails — missing `ext-uopz` or Git dubious ownership
+
+Symptom: inside a cloned plugin (e.g. The Events Calendar), `lando composer install` or host `composer install` fails with:
+
+```
+fatal: detected dubious ownership in repository at '/app/wp-content/plugins/...'
+```
+
+and/or:
+
+```
+slope-it/clock-mock requires ext-uopz >=6.1.1 -> it is missing from your system
+```
+
+**Cause:**
+
+- Plugin test dependencies require the **`uopz`** PHP extension, which lenv installs in the container — not on the host.
+- On WSL, Git repos bind-mounted from the host have different ownership inside the container.
+
+**Fix:**
+
+1. Use **`lando composer install`**, never host `composer` inside plugin folders.
+2. Sync the latest lenv templates and rebuild:
+
+```bash
+lenv rebuild
+lando rebuild -y
+```
+
+On the **first start** after rebuild, lenv runs `.lando/ensure-dev-extensions.sh`, which compiles `uopz` once (may take ~1 minute) and configures Git `safe.directory`.
+
+Verify:
+
+```bash
+lando php -m | grep uopz
+```
+
+If the script is missing from an older project, `lenv rebuild` copies `.lando/ensure-dev-extensions.sh` into the project.
+
+---
+
 ## WSL2 and Docker
 
 > **Windows + WSL2 only.** These issues apply to running Lando inside WSL2 with Docker Desktop on Windows — [officially supported by Lando](https://docs.lando.dev/install/wsl.html), but WSL2 ↔ Windows interop is fragile, especially after Docker Desktop or Windows updates.
@@ -80,6 +121,7 @@ Start here when **any** of these happen on WSL2:
 
 | Symptom | Typical check |
 |---|---|
+| Site loads and `docker ps` shows containers, but `lando rebuild` hangs on *It seems Docker is not running* | `docker info` ✔, `lenv doctor` → ✖ PowerShell |
 | `Could not automatically start Docker` but Docker Desktop is running | `docker info` works; `lando start` still fails |
 | `WSL ERROR: UtilAcceptVsock: accept4 failed 110` | `lenv doctor` → ✖ PowerShell |
 | `setup-build-engine FAILED` | Orphan `.exe` files (~500 MB) in the project root |
@@ -88,6 +130,8 @@ Start here when **any** of these happen on WSL2:
 | `network <id> not found` after a WSL crash | Interop failure **plus** stale Docker networks |
 
 These often share the same root cause: a stale WSL ↔ Windows bridge (vsock). Docker Desktop may look healthy while Lando setup cannot reach Windows.
+
+**Site still works?** Existing containers keep running — you can browse the site and run `docker exec` — but the **Lando CLI** cannot complete its setup phase until interop is restored. Fix PowerShell first; do not assume Docker is the problem.
 
 #### Diagnose first
 

@@ -25,6 +25,8 @@ services:
 
   appserver:
     run:
+      # uopz (plugin tests) + Git safe.directory for WSL bind mounts — see .lando/ensure-dev-extensions.sh
+      - /bin/sh /app/.lando/ensure-dev-extensions.sh
       # WP-CLI and Composer are not always provisioned by the wordpress recipe — download on first start
       - test -x /usr/local/bin/wp || (echo "[lenv] Downloading WP-CLI..." && curl -fsSL --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /usr/local/bin/wp && chmod +x /usr/local/bin/wp)
       - test -x /usr/local/bin/composer || (echo "[lenv] Downloading Composer..." && curl -fsSL --proto '=https' --tlsv1.2 https://getcomposer.org/download/latest-stable/composer.phar -o /usr/local/bin/composer && chmod +x /usr/local/bin/composer)

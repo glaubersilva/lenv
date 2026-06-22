@@ -28,6 +28,7 @@ lenv/
       php.ini                    <- Xdebug config (empty stub when xdebug is off)
       install-wp-config-https.php <- inject HTTPS detection into wp-config.php
       ensure-db-creds.sh         <- sync admin/admin MySQL user on stale volumes
+      ensure-dev-extensions.sh   <- uopz + Git safe.directory for plugin dev (WSL)
       xdebug-on.sh               <- runtime Xdebug enable script
       xdebug-off.sh              <- runtime Xdebug disable script
     README.md       <- project README template
@@ -149,3 +150,16 @@ lando ssh -s appserver -c "php /app/.lando/install-wp-config-https.php"
 ```
 
 Or re-run the HTTPS-related `wp-install` step after `lenv rebuild` copies the file into `.lando/`.
+
+### Dev PHP extensions and Git (`ensure-dev-extensions.sh`)
+
+**Location:** `templates/.lando/ensure-dev-extensions.sh`  
+**Synced by:** `lenv new`, `lenv rebuild` (via `sync_lando_scripts()`)  
+**Run by:** `appserver.run` in the WordPress recipe template, and FrankenPHP `docker/dev/entrypoint.sh` (Git only — FrankenPHP bakes `uopz` into the image via `install-php-extensions`)
+
+The script is idempotent:
+
+- Installs **`uopz`** via PECL on first container start if not already loaded (`uopz-7.1.1` on PHP 8+, `uopz-6.1.2` on PHP 7.4). Compiles once; subsequent starts skip.
+- Sets `git config --global --add safe.directory '*'` so bind-mounted plugin repos on WSL are not rejected as "dubious ownership".
+
+Uses **`run` / entrypoint**, not `build_as_root`, for the same reason as WP-CLI/Composer: build-phase networking is less reliable on macOS (see `platforms.md`).
