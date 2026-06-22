@@ -89,7 +89,9 @@ Validation helpers (`validate_project_name`, `validate_folder_name`) live in `he
 | Extra files | None | `docker/` synced on create/update; removed when switching away |
 | WP-CLI / Composer | Inline `curl` in `.lando.yml` (`appserver.run` + tooling) | Same pattern + download in `docker/dev/entrypoint.sh` on boot |
 | Xdebug off | Lando recipe disables extension | `LENV_XDEBUG=off` env + `lenv-xdebug-off` in entrypoint (image still builds with Xdebug) |
-| Site URL env | Proxy only | `WP_HOME` / `WP_SITEURL` in appserver environment |
+| Site URL env | `proxy.appserver` registers `__PROJECT_NAME__.lndo.site` (dots preserved) | `WP_HOME` / `WP_SITEURL` in appserver environment |
+
+Lando's default recipe proxy **strips dots** from the app name (`local.4hlib` → `local4hlib.lndo.site`). lenv registers an explicit `proxy.appserver` hostname so project names with dots (e.g. `local.*` for plugin licensing) resolve to the documented URL.
 
 Switching to or from FrankenPHP replaces `.lando.yml` and adds or removes `docker/`. Database data is preserved; only changing the **database engine** destroys data.
 

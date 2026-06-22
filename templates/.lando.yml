@@ -9,6 +9,8 @@ config:
   xdebug: off
 
 proxy:
+  appserver:
+    - __PROJECT_NAME__.lndo.site
   mailhog:
     - mailhog.__PROJECT_NAME__.lndo.site:80
   phpmyadmin:
