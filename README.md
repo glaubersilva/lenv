@@ -99,7 +99,37 @@ Switching to or from **FrankenPHP** replaces `.lando.yml` and adds or removes `d
 
 After `lenv update`, run `lando rebuild -y` inside the project. Use `lenv rebuild` first if you need the latest templates from this repo.
 
+## Known issues
+
+### LiteSpeed on Lando 3.26.x
+
+The Lando `wordpress` recipe lists `litespeed` as a `via` option, but **Lando 3.26.x currently fails** when building a LiteSpeed environment. `lando rebuild` typically ends with:
+
+```
+TypeError: Cannot read properties of undefined (reading 'version')
+```
+
+`lenv new` and `lenv update` show a warning and ask for confirmation before applying LiteSpeed (default: no). Prefer **apache**, **nginx**, or **frankenphp** unless you have verified LiteSpeed works on your Lando version.
+
+### FrankenPHP — 404 right after `lando start`
+
+FrankenPHP takes a few seconds to become ready after containers start. Until then:
+
+- Opening the site in the browser may return **404**
+- `lando start` may report the appserver healthcheck as **`[404]`** in the vitals table
+
+This is a **startup timing issue**, not a broken project. Wait 10–30 seconds and refresh — the site should load normally. If it still fails after a minute, check `lando logs -s appserver`.
+
 ## CLI commands
+
+Most project commands accept an optional `[folder]` argument. Run them **from inside the project** (where `.lando.yml` lives) or **from the parent directory** with the folder name:
+
+```bash
+lenv status                  # from inside the project folder
+lenv status mysite.lndo.site # from the parent directory
+```
+
+Commands that support `[folder]`: **`status`**, **`update`**, **`rebuild`**, **`remove`**, and **`xdebug`** (folder comes after `on`, `off`, or `status`). **`new`** does not — it creates a project interactively.
 
 ### `lenv new`
 
@@ -109,39 +139,28 @@ Create a new environment interactively — prompts for all settings in [Environm
 
 Show the current project configuration (PHP, database, webserver, Xdebug) and runtime Xdebug state when Lando is running.
 
-```bash
-lenv status                  # from inside the project folder
-lenv status mysite.lndo.site # from the parent directory
-```
+### `lenv update [folder]`
+
+Change any [Environment options](#environment-options) on an existing project. Run `lando rebuild -y` inside the project afterward.
 
 ### `lenv rebuild [folder]`
 
 Re-apply the latest `.lando.yml`, `.lando/php.ini`, `.lando/*.sh`, and `docs/*.md` templates to an existing project, preserving its current settings. Asks whether to keep `README.md` (default: yes). Run `lando rebuild -y` inside the project afterward.
 
-### `lenv update [folder]`
+### `lenv remove [folder]`
 
-Change any [Environment options](#environment-options) on an existing project. Run `lando rebuild -y` inside the project afterward.
+Permanently remove a project: runs `lando destroy`, then deletes the project folder. Asks for confirmation (default: no).
 
 ### `lenv xdebug <on|off|status> [folder]`
 
 Toggle or inspect Xdebug in the running container without rebuilding. Wraps `lando xdebug-on` / `lando xdebug-off`.
 
 ```bash
-lenv xdebug on       # enable in the running container
-lenv xdebug off      # disable in the running container
-lenv xdebug status   # show .lando.yml setting and runtime state
+lenv xdebug on                      # from inside the project folder
+lenv xdebug status mysite.lndo.site # from the parent directory
 ```
 
 Requires `lando start` to be running. To change the default for new containers, use `lenv update` and run `lando rebuild -y`.
-
-### `lenv remove [folder]`
-
-Permanently remove a project: runs `lando destroy`, then deletes the project folder.
-
-```bash
-lenv remove                  # from inside the project folder
-lenv remove mysite.lndo.site # from the parent directory
-```
 
 ## Documentation
 
