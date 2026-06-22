@@ -1,8 +1,8 @@
-# lenv
+# lenv - local WordPress dev environments with Lando.
 
 CLI and templates for spinning up complete local WordPress development environments with [Lando](https://lando.dev).
 
-Run `lenv new`, then `lando start` and `lando wp-install` — you get a working WordPress site with database tools, email capture, debugging, and WP-CLI ready to go.
+Run `lenv new` to scaffold a project folder (e.g. `mysite.lndo.site`), then `cd` into it and run `lando start` and `lando wp-install` — you get a working WordPress site with database tools, email capture, debugging, and WP-CLI ready to go.
 
 ## What each environment includes
 
@@ -16,7 +16,7 @@ Every project created by `lenv new` is a self-contained Lando stack:
 | **Mailhog** | Captures all outgoing email at `http://mailhog.mysite.lndo.site` |
 | **Xdebug** | Off by default; enable with `lenv update` or `lenv xdebug on` |
 | **IDE integration** | `PHP_IDE_CONFIG` and path mappings pre-configured for PhpStorm / VS Code |
-| **WP-CLI & Composer** | `lando wp` and `lando composer` run inside the container with the correct PHP |
+| **WP-CLI & Composer** | `lando wp` and `lando composer` run inside the container with the project's PHP version |
 | **Diagnostic pages** | `lenv-phpinfo.php` and `lenv-xdebuginfo.php` in the project root |
 | **Project docs** | `README.md` with URLs and credentials; `docs/troubleshooting.md`, `docs/xdebug.md`, and `docs/environment.md` |
 
@@ -40,13 +40,15 @@ Project names can include dots (e.g. `local.mysite`) when a plugin requires a `l
 
 ## Setup
 
+> **Note:** `~/Dev/tools/lenv` below is an example install path. Clone the repo wherever you prefer, then use that same path in the `PATH` line in the next step.
+
 **1. Clone the repository:**
 
 ```bash
 git clone https://github.com/glaubersilva/lenv.git ~/Dev/tools/lenv
 ```
 
-**2. Add `lenv` to your PATH** by editing your shell config file **directly in the WSL terminal** (not via Git Bash or any Windows tool):
+**2. Add `lenv` to your PATH:**
 
 ```bash
 # zsh (default on macOS, common on Ubuntu)
@@ -60,7 +62,7 @@ source ~/.bashrc
 
 Not sure which shell you use? Run `echo $SHELL` — it will say `/bin/zsh` or `/bin/bash`.
 
-> **Warning:** Do not add this line using Git Bash (`echo` via `wsl -e sh -c "..."` or similar). Git Bash expands `$PATH` at write time and injects the entire Windows PATH into the file, corrupting the variable and breaking tools like `lando` that depend on it. Always edit the shell config from inside WSL.
+> **Warning (Windows + WSL2):** Edit `~/.zshrc` or `~/.bashrc` **from inside your WSL terminal**, not via Git Bash (`echo` via `wsl -e sh -c "..."` or similar). Git Bash expands `$PATH` at write time and injects the entire Windows PATH into the file, corrupting the variable and breaking tools like `lando` that depend on it.
 
 ## Quick start
 
@@ -71,7 +73,7 @@ lando start
 lando wp-install          # download WordPress, create DB, run initial setup
 ```
 
-Then open `https://mysite.lndo.site` and clone your plugins into `wp-content/plugins/`.
+Then open `https://mysite.lndo.site` to verify the install.
 
 ## Environment options
 
