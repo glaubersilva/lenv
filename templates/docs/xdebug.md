@@ -123,18 +123,41 @@ netsh advfirewall firewall delete rule name="Xdebug WSL2 Port 9003"
 
 ## Enabling and disabling Xdebug
 
-Xdebug slows PHP down significantly. Toggle it by editing the project's `.lando.yml`:
+Xdebug slows PHP down. **Default for new lenv projects:** `off`.
 
-```yaml
-xdebug: debug   # enabled
-xdebug: off     # disabled
-```
-
-Then rebuild:
+### Persistent setting (survives rebuild)
 
 ```bash
+lenv update
 lando rebuild -y
 ```
+
+**Apache / Nginx / LiteSpeed** — `config.xdebug` in `.lando.yml`:
+
+```yaml
+config:
+  xdebug: off
+  xdebug: debug
+```
+
+**FrankenPHP** — `# lenv-xdebug:` in `.lando.yml` (managed by `lenv new` / `lenv update`).
+
+### Runtime toggle (no rebuild)
+
+```bash
+lenv xdebug on
+lenv xdebug off
+lenv xdebug status
+```
+
+Equivalent Lando commands (run inside the container):
+
+```bash
+lando xdebug-on
+lando xdebug-off
+```
+
+Use `lenv xdebug status` to compare the `.lando.yml` setting with the running container. On FrankenPHP, the extension is installed in the image — `off` disables it at container start, but a previous `lenv xdebug on` lasts until restart or `lenv xdebug off`.
 
 ---
 

@@ -5,7 +5,8 @@ config:
   webroot: .
   php: '8.3'
   database: mysql:8.0
-  xdebug: debug
+  via: apache
+  xdebug: off
 
 proxy:
   mailhog:
@@ -22,8 +23,10 @@ services:
 
   appserver:
     run:
-      # Configure GitHub token for Composer private packages
-      - composer config -g github-oauth.github.com "$GITHUB_TOKEN" || true
+      # WP-CLI and Composer are not always provisioned by the wordpress recipe — download on first start
+      - test -x /usr/local/bin/wp || (echo "[lenv] Downloading WP-CLI..." && curl -fsSL --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /usr/local/bin/wp && chmod +x /usr/local/bin/wp)
+      - test -x /usr/local/bin/composer || (echo "[lenv] Downloading Composer..." && curl -fsSL --proto '=https' --tlsv1.2 https://getcomposer.org/download/latest-stable/composer.phar -o /usr/local/bin/composer && chmod +x /usr/local/bin/composer)
+      - test -x /usr/local/bin/composer && composer config -g github-oauth.github.com "$GITHUB_TOKEN" || true
     overrides:
       environment:
         # Must match the server name configured in PhpStorm (Settings > PHP > Servers)
@@ -32,6 +35,8 @@ services:
         GITHUB_TOKEN: ${GITHUB_TOKEN}
       volumes:
         - ./.lando/php.ini:/usr/local/etc/php/conf.d/zzzz-lando-xdebug.ini
+        - ./.lando/xdebug-on.sh:/usr/local/bin/lenv-xdebug-on:ro
+        - ./.lando/xdebug-off.sh:/usr/local/bin/lenv-xdebug-off:ro
 
   # Email capture (replaces real SMTP in dev)
   mailhog:
@@ -49,7 +54,7 @@ tooling:
   # lando composer <command> — runs inside the container (correct PHP + extensions)
   composer:
     service: appserver
-    cmd: composer
+    cmd: /bin/sh -c 'test -x /usr/local/bin/composer || (echo "[lenv] Downloading Composer..." && curl -fsSL --proto "=https" --tlsv1.2 https://getcomposer.org/download/latest-stable/composer.phar -o /usr/local/bin/composer && chmod +x /usr/local/bin/composer); exec /usr/local/bin/composer "$@"' _
     user: root
     env:
       XDEBUG_MODE: "off"
@@ -57,20 +62,35 @@ tooling:
   # lando wp <command>
   wp:
     service: appserver
-    cmd: wp --allow-root
+    cmd: /bin/sh -c 'test -x /usr/local/bin/wp || (echo "[lenv] Downloading WP-CLI..." && curl -fsSL --proto "=https" --tlsv1.2 https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /usr/local/bin/wp && chmod +x /usr/local/bin/wp); exec /usr/local/bin/wp --allow-root "$@"' _
 
   # Run once after the first `lando start`
-  # NOTE: do NOT name this "setup" — that is a reserved Lando command
-  install:
+  # NOTE: do NOT name this "setup" or "install" — both are reserved Lando commands
+  wp-install:
     service: appserver
-    description: Download WordPress and run initial install
+    description: Download WordPress core and run initial setup
     cmd:
-      - wp core download --allow-root --path=/app
-      - wp config create --allow-root --path=/app --dbname=wordpress --dbuser=admin --dbpass=admin --dbhost=database --force
-      - wp core install --allow-root --path=/app --url=https://__PROJECT_NAME__.lndo.site --title="__PROJECT_NAME__ Dev" --admin_user=admin --admin_password=admin --admin_email=dev@lndo.site --skip-email
-      - wp rewrite structure --allow-root --path=/app '/%postname%/'
+      - test -x /usr/local/bin/wp || (echo "[lenv] Downloading WP-CLI..." && curl -fsSL --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /usr/local/bin/wp && chmod +x /usr/local/bin/wp)
+      - test -x /usr/local/bin/composer || (echo "[lenv] Downloading Composer..." && curl -fsSL --proto '=https' --tlsv1.2 https://getcomposer.org/download/latest-stable/composer.phar -o /usr/local/bin/composer && chmod +x /usr/local/bin/composer)
+      - /usr/local/bin/wp core download --allow-root --path=/app
+      - /usr/local/bin/wp config create --allow-root --path=/app --dbname=wordpress --dbuser=admin --dbpass=admin --dbhost=database --force
+      - php /app/.lando/install-wp-config-https.php
+      - /usr/local/bin/wp core install --allow-root --path=/app --url=https://__PROJECT_NAME__.lndo.site --title="__PROJECT_NAME__ Dev" --admin_user=admin --admin_password=admin --admin_email=dev@lndo.site --skip-email
+      - /usr/local/bin/wp rewrite structure --allow-root --path=/app '/%postname%/'
       - mysql -uroot -h database -e "CREATE DATABASE IF NOT EXISTS wordpress_tests; GRANT ALL PRIVILEGES ON wordpress_tests.* TO 'admin'@'%'; FLUSH PRIVILEGES;"
-      - wp config set WP_DEBUG true --raw --allow-root --path=/app
-      - wp config set WP_DEBUG_LOG true --raw --allow-root --path=/app
-      - wp config set WP_DEBUG_DISPLAY false --raw --allow-root --path=/app
-      - wp config set SCRIPT_DEBUG false --raw --allow-root --path=/app
+      - /usr/local/bin/wp config set WP_DEBUG true --raw --allow-root --path=/app
+      - /usr/local/bin/wp config set WP_DEBUG_LOG true --raw --allow-root --path=/app
+      - /usr/local/bin/wp config set WP_DEBUG_DISPLAY false --raw --allow-root --path=/app
+      - /usr/local/bin/wp config set SCRIPT_DEBUG false --raw --allow-root --path=/app
+
+  xdebug-on:
+    service: appserver
+    description: Enable Xdebug without rebuild.
+    cmd: /bin/sh /usr/local/bin/lenv-xdebug-on
+    user: root
+
+  xdebug-off:
+    service: appserver
+    description: Disable Xdebug without rebuild.
+    cmd: /bin/sh /usr/local/bin/lenv-xdebug-off
+    user: root

@@ -20,45 +20,44 @@ if ($targetFolder) {
     $folder     = $current['folder'];
 }
 
-$landoFile = $projectDir . '/.lando.yml';
-$lando     = file_get_contents($landoFile);
-$values    = extract_lando_values($lando);
+$values = extract_lando_values(file_get_contents($projectDir . '/.lando.yml'));
 
 echo "Project: {$folder}  (app: {$values['name']})\n\n";
-echo "Current settings:
-
-";
+echo "Current settings:\n\n";
 
 $phpOptions = ['8.3', '8.2', '8.1', '8.0', '7.4'];
-echo "  ⓘ  Press Enter to keep current. Options: " . implode(', ', $phpOptions) . "
-";
+echo "  ⓘ  Press Enter to keep current. Options: " . implode(', ', $phpOptions) . "\n";
 $newPhp = prompt("PHP version", $values['php']);
 if (!in_array($newPhp, $phpOptions)) {
     abort("Invalid PHP version. Choose from: " . implode(', ', $phpOptions));
 }
 
 $dbOptions = ['mysql:8.0', 'mysql:5.7', 'mariadb:11.4', 'mariadb:10.6'];
-echo "
-  ⓘ  Press Enter to keep current. Options: " . implode(', ', $dbOptions) . "
-";
+echo "\n  ⓘ  Press Enter to keep current. Options: " . implode(', ', $dbOptions) . "\n";
 $newDatabase = prompt("Database", $values['database']);
 if (!in_array($newDatabase, $dbOptions)) {
     abort("Invalid database. Choose from: " . implode(', ', $dbOptions));
 }
 
-$viaOptions = ['apache', 'nginx'];
-echo "
-  ⓘ  Press Enter to keep current. Options: " . implode(', ', $viaOptions) . "
-";
+$viaOptions = webserver_options();
+echo "\n  ⓘ  Press Enter to keep current. Options: " . implode(', ', $viaOptions) . "\n";
+echo "  ⚠  litespeed may fail on Lando 3.26.x — you will be warned before proceeding\n";
+if (is_litespeed_webserver($values['via'])) {
+    echo "  ⚠  Current webserver is litespeed, which is known to fail on Lando 3.26.x.\n";
+}
 $newVia = prompt("Webserver", $values['via']);
-if (!in_array($newVia, $viaOptions)) {
+if (!validate_webserver($newVia)) {
     abort("Invalid webserver. Choose from: " . implode(', ', $viaOptions));
+}
+if (is_litespeed_webserver($newVia) && $newVia !== $values['via'] && !confirm_litespeed_choice()) {
+    abort("Aborted.");
+}
+if (is_frankenphp_webserver($newVia) && !validate_frankenphp_php($newPhp)) {
+    abort("FrankenPHP requires PHP 8.0 or newer. Choose from: " . implode(', ', frankenphp_php_options()));
 }
 
 $xdebugOptions = ['off', 'debug'];
-echo "
-  ⓘ  Press Enter to keep current. Options: " . implode(', ', $xdebugOptions) . "
-";
+echo "\n  ⓘ  Press Enter to keep current. Options: " . implode(', ', $xdebugOptions) . "\n";
 $newXdebug = prompt("Xdebug", $values['xdebug']);
 if (!in_array($newXdebug, $xdebugOptions)) {
     abort("Invalid Xdebug value. Choose from: " . implode(', ', $xdebugOptions));
@@ -86,30 +85,33 @@ echo "└───────────────────────�
 
 if ($newDatabase !== $values['database']) {
     echo "⚠️  Changing the database will destroy existing data.\n";
-    echo "   Export first:  lando wp db export --allow-root backup.sql\n\n";
+    echo "   Export first:  lando wp db export backup.sql\n\n";
+}
+
+if ($newVia !== $values['via']) {
+    echo "⚠️  Changing the webserver replaces .lando.yml";
+    if (is_frankenphp_webserver($newVia) || is_frankenphp_webserver($values['via'])) {
+        echo " and docker/ files";
+    }
+    echo ".\n\n";
 }
 
 if (!confirm("Apply changes?")) {
     abort("Aborted.");
 }
 
-// Apply changes to .lando.yml
-$new = $lando;
-$new = preg_replace("/php: '" . preg_quote($values['php'], '/') . "'/",
-                    "php: '{$newPhp}'", $new);
-$new = preg_replace('/database: ' . preg_quote($values['database'], '/') . '/',
-                    "database: {$newDatabase}", $new);
+write_project_lando($projectDir, [
+    'name'     => $values['name'],
+    'php'      => $newPhp,
+    'database' => $newDatabase,
+    'via'      => $newVia,
+    'xdebug'   => $newXdebug,
+]);
 
-if (preg_match('/^  via: /m', $new)) {
-    $new = preg_replace('/^  via: .+$/m', "  via: {$newVia}", $new);
-} elseif ($newVia !== 'apache') {
-    $new = preg_replace('/^  database: .+$/m', "$0\n  via: {$newVia}", $new);
-}
-
-$new = preg_replace('/^  xdebug: .+$/m', "  xdebug: {$newXdebug}", $new);
-
-file_put_contents($landoFile, $new);
 echo "\n  ✔ .lando.yml updated\n";
+if (is_frankenphp_webserver($newVia)) {
+    echo "  ✔ docker/ synced\n";
+}
 
 box('Done!');
 echo "Run inside the project to apply changes:\n\n";

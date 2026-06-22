@@ -6,8 +6,10 @@ The easiest way to change environment settings is with the CLI:
 lenv update <project-folder>
 ```
 
-This walks you through changing PHP version, database, webserver and Xdebug interactively,
+This walks you through changing PHP version, database, webserver, and Xdebug interactively,
 then updates `.lando.yml` and tells you when to run `lando rebuild -y`.
+
+Xdebug defaults to **off** in `lenv new`. Use `lenv update` to change it later.
 
 ---
 
@@ -78,23 +80,35 @@ lando wp db import --allow-root backup.sql
 
 ## Web server
 
-The `wordpress` recipe supports both Apache and Nginx via the `via` key under `config`:
+The `wordpress` recipe supports Apache, Nginx, and LiteSpeed via the `via` key under `config`:
 
 ```yaml
 config:
   via: apache   # default
 ```
 
-### Switch to Nginx
+Change interactively:
 
-```yaml
-config:
-  via: nginx
+```bash
+lenv update <project-folder>
 ```
 
-No code changes required — Lando configures Nginx with the correct WordPress rewrite rules automatically.
+### Options
 
-#### Apache vs Nginx in this stack
+| Value | Server |
+|---|---|
+| `apache` | Apache (default) |
+| `nginx` | Nginx |
+| `litespeed` | LiteSpeed (experimental) |
+| `frankenphp` | FrankenPHP (custom appserver) |
+
+After changing, rebuild:
+
+```bash
+lando rebuild -y
+```
+
+### Apache vs Nginx
 
 | | Apache | Nginx |
 |---|---|---|
@@ -103,6 +117,41 @@ No code changes required — Lando configures Nginx with the correct WordPress r
 | Performance (local dev) | Equivalent | Equivalent |
 
 For local development, the choice has no practical impact. Apache is recommended unless you need to match a specific production Nginx configuration.
+
+### LiteSpeed
+
+Available in `lenv new` and `lenv update`, but **experimental**. The Lando wordpress recipe advertises `via: litespeed`, yet Lando 3.26.x currently fails at `lando rebuild` with:
+
+```
+TypeError: Cannot read properties of undefined (reading 'version')
+```
+
+lenv shows a warning and asks for confirmation before applying LiteSpeed. Use `nginx` or `frankenphp` unless you have verified LiteSpeed works on your Lando version.
+
+### FrankenPHP
+
+Select `frankenphp` in `lenv new` or `lenv update`. lenv scaffolds a custom `type: lando` appserver with:
+
+- `docker/frankenphp/Dockerfile` — FrankenPHP image with WordPress extensions
+- `docker/dev/Caddyfile` — webroot at `/app`
+- `docker/dev/entrypoint.sh` — waits for database, starts FrankenPHP
+
+FrankenPHP requires **PHP 8.0+**. After creating or switching to FrankenPHP:
+
+```bash
+lando rebuild -y
+lando wp-install
+```
+
+Toggle Xdebug at runtime (all webservers):
+
+```bash
+lenv xdebug on
+lenv xdebug off
+lenv xdebug status
+```
+
+Set the persistent default with `lenv update`, then `lando rebuild -y`.
 
 ---
 

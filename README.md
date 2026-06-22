@@ -2,7 +2,7 @@
 
 CLI and templates for spinning up complete local WordPress development environments with [Lando](https://lando.dev).
 
-Run `lenv new`, then `lando start` and `lando install` — you get a working WordPress site with database tools, email capture, debugging, and WP-CLI ready to go.
+Run `lenv new`, then `lando start` and `lando wp-install` — you get a working WordPress site with database tools, email capture, debugging, and WP-CLI ready to go.
 
 ## What each environment includes
 
@@ -10,7 +10,7 @@ Every project created by `lenv new` is a self-contained Lando stack:
 
 | | |
 |---|---|
-| **WordPress** | Core installed via `lando install`, pretty permalinks, `WP_DEBUG` enabled |
+| **WordPress** | Core installed via `lando wp-install`, pretty permalinks, `WP_DEBUG` enabled |
 | **Database** | MySQL or MariaDB (configurable), plus a `wordpress_tests` database for PHPUnit |
 | **phpMyAdmin** | Web UI at `http://phpmyadmin.mysite.lndo.site` — credentials `admin` / `admin` |
 | **Mailhog** | Captures all outgoing email at `http://mailhog.mysite.lndo.site` |
@@ -18,7 +18,7 @@ Every project created by `lenv new` is a self-contained Lando stack:
 | **IDE integration** | `PHP_IDE_CONFIG` and path mappings pre-configured for PhpStorm / VS Code |
 | **WP-CLI & Composer** | `lando wp` and `lando composer` run inside the container with the correct PHP |
 | **Diagnostic pages** | `lenv-phpinfo.php` and `lenv-xdebuginfo.php` in the project root |
-| **Project docs** | `README.md` with URLs, credentials, and troubleshooting; `docs/xdebug.md` and `docs/environment.md` |
+| **Project docs** | `README.md` with URLs and credentials; `docs/troubleshooting.md`, `docs/xdebug.md`, and `docs/environment.md` |
 
 ### URLs and credentials (example: `mysite`)
 
@@ -68,7 +68,7 @@ Not sure which shell you use? Run `echo $SHELL` — it will say `/bin/zsh` or `/
 lenv new                  # interactive — name, PHP version, database
 cd mysite.lndo.site
 lando start
-lando install             # download WordPress, create DB, run initial setup
+lando wp-install          # download WordPress, create DB, run initial setup
 ```
 
 Then open `https://mysite.lndo.site` and clone your plugins into `wp-content/plugins/`.
@@ -77,18 +77,31 @@ Then open `https://mysite.lndo.site` and clone your plugins into `wp-content/plu
 
 ### `lenv new`
 
-Create a new environment interactively — asks for project name, folder, PHP version, and database engine.
+Create a new environment interactively — asks for project name, folder, PHP version, database engine, webserver, and Xdebug (default off).
 
 ### `lenv rebuild [folder]`
 
-Re-apply the latest `.lando.yml` and `.lando/php.ini` templates to an existing project, preserving its current settings. Run `lando rebuild -y` inside the project afterward.
+Re-apply the latest `.lando.yml`, `.lando/php.ini`, `.lando/*.sh`, and `docs/*.md` templates to an existing project, preserving its current settings. Asks whether to keep `README.md` (default: yes). Run `lando rebuild -y` inside the project afterward.
 
 ### `lenv update [folder]`
 
 Change PHP version, database, webserver, or Xdebug interactively. Run `lando rebuild -y` inside the project afterward.
 
+### `lenv xdebug <on|off|status> [folder]`
+
+Toggle or inspect Xdebug in the running container without rebuilding. Wraps `lando xdebug-on` / `lando xdebug-off`.
+
+```bash
+lenv xdebug on       # enable in the running container
+lenv xdebug off      # disable in the running container
+lenv xdebug status   # show .lando.yml setting and runtime state
+```
+
+Requires `lando start` to be running. To change the default for new containers, use `lenv update` and run `lando rebuild -y`.
+
 ## Documentation
 
 - [docs/architecture.md](docs/architecture.md) — repository layout, templates, and how updates propagate to existing projects
+- [docs/platforms.md](docs/platforms.md) — WSL vs macOS differences and why templates are built the way they are
 
-Each generated project also includes its own `README.md` and `docs/` with Xdebug setup, environment configuration, and WSL2 troubleshooting.
+Each generated project also includes its own `README.md` and `docs/` with troubleshooting, Xdebug setup, and environment configuration.
