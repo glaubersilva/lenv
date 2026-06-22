@@ -10,7 +10,7 @@ Run `lenv new` to scaffold a project folder (e.g. `mysite.lndo.site`), then `cd`
 
 Every project created by `lenv new` is a self-contained Lando stack:
 
-| | |
+| Component | Description |
 |---|---|
 | **WordPress** | Core installed via `lando wp-install`, pretty permalinks, `WP_DEBUG` enabled |
 | **Database** | MySQL or MariaDB (configurable), plus a `wordpress_tests` database for PHPUnit |
@@ -38,7 +38,7 @@ Project names can include dots (e.g. `local.mysite`) when a plugin requires a `l
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - [Lando](https://lando.dev)
 
-**Windows:** WSL2 with **Ubuntu** and Docker Desktop WSL integration enabled (Settings → Resources → WSL Integration).
+**Windows:** WSL2 with **Ubuntu** and Docker Desktop WSL integration enabled (Settings → Resources → WSL Integration). If WSL ↔ Windows interop breaks (`UtilAcceptVsock`), see [`scripts/windows/`](scripts/windows/) and each project's `docs/troubleshooting.md`.
 
 ## Setup
 
@@ -71,9 +71,11 @@ Not sure which shell you use? Run `echo $SHELL` — it will say `/bin/zsh` or `/
 ```bash
 lenv new                  # interactive — see Environment options below
 cd mysite.lndo.site
-lando start
+lando start               # day-to-day start
 lando wp-install          # download WordPress, create DB, run initial setup
 ```
+
+If `lando start` fails on WSL2 (especially after a Docker Desktop update), run `lenv doctor` then `lenv fix`.
 
 Then open `https://mysite.lndo.site` to verify the install.
 
@@ -133,7 +135,7 @@ lenv status                  # from inside the project folder
 lenv status mysite.lndo.site # from the parent directory
 ```
 
-Commands that support `[folder]`: **`status`**, **`update`**, **`rebuild`**, **`remove`**, and **`xdebug`** (folder comes after `on`, `off`, or `status`). **`new`** does not — it creates a project interactively.
+Commands that support `[folder]`: **`status`**, **`update`**, **`rebuild`**, **`remove`**, **`doctor`**, **`fix`**, and **`xdebug`** (folder comes after `on`, `off`, or `status`). **`new`** does not — it creates a project interactively.
 
 ### `lenv new`
 
@@ -154,6 +156,21 @@ Re-apply the latest `.lando.yml`, `.lando/php.ini`, `.lando/*.sh`, and `docs/*.m
 ### `lenv remove [folder]`
 
 Permanently remove a project: runs `lando destroy`, then deletes the project folder. Asks for confirmation (default: no).
+
+### `lenv doctor [folder]`
+
+Check host and project readiness: Docker, Lando version, PowerShell/wslvar on WSL2, and orphan `.exe` files. Run this when `lando start` fails with *Could not automatically start Docker* even though Docker Desktop is running.
+
+### `lenv fix [folder]`
+
+WSL2 recovery wrapper — use when `lando start` fails or after a Docker Desktop update, not as a daily substitute for `lando start`. Before `lando start`, it:
+
+1. Removes orphan build-engine `.exe` files from the project root (WSL2 only)
+2. Verifies Docker responds and blocks if WSL ↔ Windows interop is broken
+3. On WSL2, runs `lando update` to sync with Docker Desktop
+4. Runs `lando start`
+
+Pair with `lenv doctor` to diagnose first. For normal starts, use `lando start` directly.
 
 ### `lenv xdebug <on|off|status> [folder]`
 

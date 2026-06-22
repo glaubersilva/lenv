@@ -15,8 +15,11 @@ Other host-side commands:
 | Command | Purpose |
 |---|---|
 | `lenv status [folder]` | Show current PHP, database, webserver, and Xdebug settings |
+| `lenv update [folder]` | Change PHP, database, webserver, or Xdebug setting |
 | `lenv rebuild [folder]` | Re-apply lenv templates; then run `lando rebuild -y` |
 | `lenv remove [folder]` | Destroy the Lando app and delete the project folder |
+| `lenv doctor [folder]` | Check Docker/Lando/WSL readiness before start |
+| `lenv fix [folder]` | WSL2 recovery: clean orphans, `lando update`, then `lando start` |
 | `lenv xdebug on/off/status [folder]` | Toggle or inspect runtime Xdebug |
 
 Xdebug defaults to **off** in `lenv new`. Use `lenv update` to change it later.

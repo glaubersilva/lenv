@@ -155,5 +155,12 @@ foreach (['lenv-phpinfo.php', 'lenv-xdebuginfo.php'] as $file) {
 box('Environment created successfully!');
 echo "Next steps:\n\n";
 echo "  cd {$folderName}\n";
-echo "  lando start\n";
+if ($isWsl) {
+    echo "  lando start         # use lenv fix if start fails on WSL2\n";
+} else {
+    echo "  lando start\n";
+}
 echo "  lando wp-install\n\n";
+if ($isWsl) {
+    echo "If start fails, run `lenv doctor` then `lenv fix` — see docs/troubleshooting.md.\n\n";
+}

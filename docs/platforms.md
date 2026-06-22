@@ -40,6 +40,8 @@ Lando's default recipe proxy strips dots from the app name (`local.mysite` → `
 | `lenv update [folder]` | Change PHP, database, webserver, Xdebug |
 | `lenv rebuild [folder]` | Re-sync templates from this repo |
 | `lenv remove [folder]` | `lando destroy` + delete project folder |
+| `lenv doctor [folder]` | Preflight checks for Layer 1 issues (Docker, PowerShell, orphan `.exe`) |
+| `lenv fix [folder]` | WSL2 recovery — clean orphans, `lando update`, then `lando start` |
 | `lenv xdebug on/off/status [folder]` | Runtime Xdebug toggle |
 
 All except `new` accept optional `[folder]` — run inside the project or pass the folder name from the parent directory.
@@ -216,9 +218,9 @@ These are real differences users encounter but are outside what templates can fi
 
 ### WSL2 only
 
-- **Lando build engine** downloads a Windows `.exe` on failure — see troubleshooting doc
+- **Lando build engine** downloads a Windows `.exe` on failure — see troubleshooting doc; `lenv doctor` detects orphans and `lenv fix` removes them
 - **Docker WSL integration** silently disabled after Windows/Docker updates
-- **vsock timeouts** between WSL and Windows host
+- **vsock timeouts** between WSL and Windows host — try `wsl --shutdown` first; if interop stays broken, double-click `scripts/windows/fix-wsl-interop.bat` as Administrator on Windows
 - **PATH corruption** if shell config edited via Git Bash instead of WSL terminal
 - **Xdebug + VS Code** needs Windows port proxy (`192.168.65.254` → WSL) — see `templates/docs/xdebug.md`
 
@@ -244,7 +246,7 @@ Once `lando start` completes successfully:
 - URLs: `https://{name}.lndo.site`, phpMyAdmin, Mailhog (dots in `{name}` preserved when using current templates)
 - Credentials: `admin` / `admin`
 - Commands: `lando wp`, `lando composer`, `lando wp-install`
-- Host CLI: `lenv status`, `lenv update`, `lenv rebuild`, `lenv remove`, `lenv xdebug`
+- Host CLI: `lenv status`, `lenv update`, `lenv rebuild`, `lenv remove`, `lenv doctor`, `lenv fix`, `lenv xdebug`
 - Databases: `wordpress` + `wordpress_tests`
 - Xdebug toggle via `.lando.yml` or `lenv xdebug on/off`
 - Private package auth via `GITHUB_TOKEN` env var

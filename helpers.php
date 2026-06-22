@@ -381,6 +381,304 @@ function run_lando_tooling(string $projectDir, string $tooling): int
     return $exitCode;
 }
 
+function is_wsl(): bool
+{
+    return file_exists('/proc/version')
+        && str_contains((string) file_get_contents('/proc/version'), 'microsoft');
+}
+
+function find_orphan_build_engine_exes(string $dir): array
+{
+    if (!is_dir($dir)) {
+        return [];
+    }
+
+    $exes = [];
+    foreach (scandir($dir) as $item) {
+        if ($item === '.' || $item === '..') {
+            continue;
+        }
+
+        $path = $dir . '/' . $item;
+        if (is_file($path) && str_ends_with(strtolower($item), '.exe')) {
+            $exes[] = $path;
+        }
+    }
+
+    return $exes;
+}
+
+function format_bytes(int $bytes): string
+{
+    if ($bytes >= 1048576) {
+        return round($bytes / 1048576, 1) . ' MB';
+    }
+
+    if ($bytes >= 1024) {
+        return round($bytes / 1024, 1) . ' KB';
+    }
+
+    return $bytes . ' B';
+}
+
+function remove_orphan_build_engine_exes(string $dir): int
+{
+    $removed = 0;
+    foreach (find_orphan_build_engine_exes($dir) as $file) {
+        if (@unlink($file)) {
+            $removed++;
+        }
+    }
+
+    return $removed;
+}
+
+function command_exists(string $command): bool
+{
+    $path = trim((string) shell_exec('command -v ' . escapeshellarg($command) . ' 2>/dev/null'));
+
+    return $path !== '';
+}
+
+function run_host_command(string $command, ?int $timeoutSeconds = null): array
+{
+    if ($timeoutSeconds !== null && command_exists('timeout')) {
+        $command = 'timeout ' . $timeoutSeconds . ' ' . $command;
+    }
+
+    $output = [];
+    $exitCode = 0;
+    exec($command . ' 2>&1', $output, $exitCode);
+
+    return ['exit' => $exitCode, 'output' => implode("\n", $output)];
+}
+
+function get_docker_info_status(): array
+{
+    $result = run_host_command('docker info --format "{{.ServerVersion}}"');
+    if ($result['exit'] !== 0) {
+        return [
+            'ok' => false,
+            'detail' => trim($result['output']) ?: 'docker info failed',
+        ];
+    }
+
+    return [
+        'ok' => true,
+        'detail' => 'Server ' . trim($result['output']),
+    ];
+}
+
+function get_lando_version_status(): array
+{
+    if (!command_exists('lando')) {
+        return ['ok' => false, 'detail' => 'lando not found in PATH'];
+    }
+
+    $result = run_host_command('lando version');
+    if ($result['exit'] !== 0) {
+        return ['ok' => false, 'detail' => trim($result['output']) ?: 'lando version failed'];
+    }
+
+    return ['ok' => true, 'detail' => trim($result['output'])];
+}
+
+function get_powershell_status(): array
+{
+    if (!command_exists('powershell.exe')) {
+        return [
+            'ok' => false,
+            'detail' => 'powershell.exe not in PATH — Lando setup-build-engine needs it on WSL2',
+        ];
+    }
+
+    $result = run_host_command(
+        'powershell.exe -NoProfile -Command ' . escapeshellarg('$PSVersionTable.PSVersion.ToString()'),
+        5
+    );
+    if ($result['exit'] !== 0) {
+        $detail = trim($result['output']) ?: 'powershell.exe failed to run';
+        if ($result['exit'] === 124 || str_contains($detail, 'UtilAcceptVsock') || str_contains($detail, 'timed out')) {
+            $detail = 'WSL ↔ Windows interop broken (UtilAcceptVsock) — run wsl --shutdown from Windows; if that fails, double-click scripts/windows/fix-wsl-interop.bat as Administrator';
+        }
+
+        return [
+            'ok' => false,
+            'detail' => $detail,
+        ];
+    }
+
+    return ['ok' => true, 'detail' => 'PowerShell ' . trim($result['output'])];
+}
+
+function get_wslvar_status(): array
+{
+    if (!command_exists('wslvar')) {
+        return [
+            'ok' => false,
+            'detail' => 'wslvar not found — install wslu: sudo apt install wslu',
+        ];
+    }
+
+    return ['ok' => true, 'detail' => trim((string) shell_exec('command -v wslvar'))];
+}
+
+function print_doctor_check(string $label, bool $ok, string $detail, bool $warn = false): void
+{
+    if ($ok) {
+        echo "  ✔ {$label}: {$detail}\n";
+        return;
+    }
+
+    $icon = $warn ? '⚠' : '✖';
+    echo "  {$icon} {$label}: {$detail}\n";
+}
+
+function run_lando_doctor_checks(?array $project = null): int
+{
+    $issues = 0;
+
+    echo "Host checks\n";
+
+    if (is_wsl()) {
+        print_doctor_check('Platform', true, 'WSL2');
+    } else {
+        print_doctor_check('Platform', true, 'Linux/macOS (non-WSL)');
+    }
+
+    $docker = get_docker_info_status();
+    print_doctor_check('Docker', $docker['ok'], $docker['detail']);
+    if (!$docker['ok']) {
+        $issues++;
+    }
+
+    $lando = get_lando_version_status();
+    print_doctor_check('Lando', $lando['ok'], $lando['detail']);
+    if (!$lando['ok']) {
+        $issues++;
+    }
+
+    if (is_wsl()) {
+        $powershell = get_powershell_status();
+        print_doctor_check('PowerShell', $powershell['ok'], $powershell['detail']);
+        if (!$powershell['ok']) {
+            $issues++;
+        }
+
+        $wslvar = get_wslvar_status();
+        print_doctor_check('wslvar', $wslvar['ok'], $wslvar['detail'], !$wslvar['ok']);
+        if (!$wslvar['ok']) {
+            $issues++;
+        }
+    }
+
+    if ($project !== null) {
+        echo "\nProject checks ({$project['folder']})\n";
+
+        $exes = find_orphan_build_engine_exes($project['dir']);
+        if ($exes === []) {
+            print_doctor_check('Build engine orphans', true, 'none');
+        } else {
+            $totalBytes = 0;
+            foreach ($exes as $file) {
+                $totalBytes += (int) filesize($file);
+            }
+            print_doctor_check(
+                'Build engine orphans',
+                false,
+                count($exes) . ' file(s), ' . format_bytes($totalBytes) . ' — run lenv fix or find . -maxdepth 1 -name \'*.exe\' -delete'
+            );
+            $issues++;
+        }
+    }
+
+    echo "\n";
+    if ($issues === 0) {
+        echo "All checks passed.\n";
+        if (is_wsl()) {
+            echo "Use `lando start` day to day. Run `lenv fix` when recovering from WSL2/Docker issues.\n";
+        }
+        return 0;
+    }
+
+    echo "{$issues} issue(s) found.\n\n";
+    echo "Quick recovery on WSL2:\n";
+    echo "  1. wsl --shutdown   (PowerShell/CMD on Windows)\n";
+    echo "  2. Reopen WSL, run: lenv doctor\n";
+    if ($project !== null) {
+        echo "  3. lenv fix {$project['folder']}\n\n";
+    } else {
+        echo "  3. cd <project-folder> && lenv fix\n\n";
+    }
+    echo "If PowerShell is still broken after step 1, double-click scripts/windows/fix-wsl-interop.bat\n";
+    echo "as Administrator on Windows (keep the .ps1 beside it — see docs/troubleshooting.md).\n\n";
+    echo "Do not run lenv fix while PowerShell/interop is broken — Lando will\n";
+    echo "download a ~500 MB Windows build-engine .exe into the project and fail anyway.\n\n";
+    echo "See docs/troubleshooting.md for the full guide.\n";
+
+    return 1;
+}
+
+function assert_wsl_interop_for_lando(): void
+{
+    if (!is_wsl()) {
+        return;
+    }
+
+    $powershell = get_powershell_status();
+    if ($powershell['ok']) {
+        return;
+    }
+
+    abort(
+        "WSL ↔ Windows interop is broken — Lando cannot start yet.\n\n"
+        . "  {$powershell['detail']}\n\n"
+        . "Why this matters on WSL2:\n"
+        . "  Lando + Docker Desktop uses a Windows build engine (.exe) and PowerShell\n"
+        . "  to install its CA and build images. Docker CLI works in Ubuntu, but Lando\n"
+        . "  setup still needs Windows interop. When it fails, Lando downloads a ~500 MB\n"
+        . "  .exe into your project folder and then errors out.\n\n"
+        . "Fix first (PowerShell/CMD on Windows, not inside WSL):\n"
+        . "  wsl --shutdown\n\n"
+        . "If that does not restore interop, on Windows double-click as Administrator:\n"
+        . "  scripts/windows/fix-wsl-interop.bat\n"
+        . "  (copy fix-wsl-interop.bat + .ps1 together — see scripts/windows/README.md)\n\n"
+        . "Then reopen WSL and run:\n"
+        . "  lenv doctor\n"
+        . "  lenv fix\n\n"
+        . "This cannot be avoided via .lando.yml or lenv templates — it is Lando host setup.\n"
+        . "See docs/troubleshooting.md for more."
+    );
+}
+
+function prepare_lenv_fix(string $projectDir): void
+{
+    $removed = remove_orphan_build_engine_exes($projectDir);
+    if ($removed > 0) {
+        echo "Removed {$removed} orphan build-engine .exe file(s).\n\n";
+    }
+
+    $docker = get_docker_info_status();
+    if (!$docker['ok']) {
+        abort("Docker is not reachable: {$docker['detail']}\n\n"
+            . "On WSL2: open Docker Desktop, check WSL Integration for Ubuntu, then run `docker info`.");
+    }
+
+    assert_wsl_interop_for_lando();
+
+    if (!is_wsl()) {
+        return;
+    }
+
+    echo "WSL2: syncing Lando with Docker Desktop (`lando update`)...\n\n";
+    passthru('cd ' . escapeshellarg($projectDir) . ' && lando update', $exitCode);
+    if ($exitCode !== 0) {
+        abort('lando update failed. Run `lenv doctor` for details.');
+    }
+
+    echo "\n";
+}
+
 function get_lando_xdebug_runtime_status(string $projectDir): ?array
 {
     $php = <<<'PHP'

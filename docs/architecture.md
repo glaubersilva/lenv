@@ -14,6 +14,8 @@ lenv/
     update.php      <- lenv update [folder]
     rebuild.php     <- lenv rebuild [folder]
     remove.php      <- lenv remove [folder]
+    doctor.php      <- lenv doctor [folder]
+    fix.php         <- lenv fix [folder]
     xdebug.php      <- lenv xdebug <on|off|status> [folder]
   templates/
     .lando.yml          <- WordPress recipe template (apache, nginx, litespeed)
@@ -32,6 +34,13 @@ lenv/
       troubleshooting.md <- Lando/Docker troubleshooting (synced by lenv rebuild)
       xdebug.md     <- Xdebug setup guide (copied to new projects)
       environment.md <- Environment config guide (copied to new projects)
+  scripts/
+    windows/
+      fix-wsl-interop.bat  <- double-click as Administrator (runs the .ps1)
+      fix-wsl-interop.ps1 <- WSL interop recovery logic
+      wslconfig.example        <- optional WSL2 ceilings for 16 GB+ hosts
+      wslconfig.example-small  <- optional WSL2 ceilings for 8–12 GB hosts
+      README.md           <- how to copy and run the script
   docs/
     architecture.md <- repository layout and template propagation
     platforms.md    <- WSL vs macOS differences and template rationale (dev only)
@@ -73,11 +82,13 @@ Then inside the project: `lando rebuild -y`
 | `lenv update` | Interactive edit of PHP version, database, webserver, and Xdebug in `.lando.yml` |
 | `lenv rebuild` | Re-applies `.lando.yml`, `.lando/php.ini`, `.lando/*.sh`, and `docs/*.md`; keeps `README.md` unless you opt in to replace it |
 | `lenv remove` | Runs `lando destroy`, then deletes the project folder; asks for confirmation (default: no) |
+| `lenv doctor` | Check Docker/Lando/WSL readiness and orphan build-engine files |
+| `lenv fix` | WSL2 recovery wrapper (clean orphans, `lando update`, then `lando start`) |
 | `lenv xdebug` | Toggle or inspect Xdebug in the running container (`on`, `off`, `status`) |
 
 ### `[folder]` argument
 
-`status`, `update`, `rebuild`, `remove`, and `xdebug` share `load_lenv_project()` in `helpers.php`. Run from **inside the project** (cwd contains `.lando.yml`) or from the **parent directory** with the folder name:
+`status`, `update`, `rebuild`, `remove`, `doctor`, `fix`, and `xdebug` share `load_lenv_project()` in `helpers.php`. Run from **inside the project** (cwd contains `.lando.yml`) or from the **parent directory** with the folder name:
 
 ```bash
 lenv status                  # inside the project

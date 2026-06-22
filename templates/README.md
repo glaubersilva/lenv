@@ -39,7 +39,8 @@ Extended guides are in `docs/` — check that folder for the most up-to-date ref
 ```bash
 lando start
 ```
-> Having trouble? See [docs/troubleshooting.md](docs/troubleshooting.md).
+
+> Having trouble on WSL2? Run `lenv doctor`, then `lenv fix` (cleans orphan `.exe` files, syncs Lando with Docker Desktop, and retries `lando start`). See [docs/troubleshooting.md](docs/troubleshooting.md).
 
 **2. Install WordPress:**
 ```bash
@@ -71,8 +72,8 @@ lando wp theme activate <theme-name>
 
 Two databases are created by `lando wp-install`:
 
-| | Main | Tests |
-|---|---|---|
+| Field | Main | Tests |
+| --- | --- | --- |
 | **Name** | `wordpress` | `wordpress_tests` |
 | **User** | `admin` | `admin` |
 | **Password** | `admin` | `admin` |
@@ -165,6 +166,8 @@ Run these **from the host** to change project configuration (see [docs/environme
 | `lenv update`        | Change PHP, database, webserver, or Xdebug setting    |
 | `lenv rebuild`       | Re-apply lenv templates; then run `lando rebuild -y`  |
 | `lenv remove`        | Destroy the Lando app and delete this project folder  |
+| `lenv doctor`        | Check Docker/Lando/WSL readiness before start         |
+| `lenv fix`           | WSL2 recovery: clean orphans, `lando update`, then `lando start` |
 | `lenv xdebug on`     | Enable Xdebug in the running container (no rebuild)   |
 | `lenv xdebug off`    | Disable Xdebug in the running container (no rebuild)  |
 | `lenv xdebug status` | Show configured vs runtime Xdebug state               |
