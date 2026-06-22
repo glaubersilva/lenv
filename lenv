@@ -13,11 +13,14 @@ if ($command === 'help' || $command === '--help' || !file_exists($commandFile)) 
     echo "\nUsage: lenv <command> [project-folder]\n\n";
     echo "Commands:\n";
     echo "  new                      Create a new Lando environment interactively\n";
-    echo "  rebuild [folder]         Rebuild a project from the latest templates\n";
+    echo "  status [folder]          Show current project configuration\n";
     echo "  update [folder]          Change environment settings (PHP, database, webserver, Xdebug)\n";
+    echo "  rebuild [folder]         Rebuild a project from the latest templates\n";
+    echo "  remove [folder]          Destroy the Lando app and delete the project folder\n";
     echo "  xdebug <on|off|status> [folder]  Toggle or inspect Xdebug in the running container\n\n";
     echo "If [folder] is omitted, the command runs on the current directory\n";
-    echo "if it is a recognised lenv project.\n\n";
+    echo "when it contains a .lando.yml file, or from the parent directory when\n";
+    echo "[folder] is the project directory name (e.g. lenv status mysite.lndo.site).\n\n";
     exit($command === 'help' || $command === '--help' ? 0 : 1);
 }
 

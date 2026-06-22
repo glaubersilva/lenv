@@ -105,6 +105,15 @@ After `lenv update`, run `lando rebuild -y` inside the project. Use `lenv rebuil
 
 Create a new environment interactively — prompts for all settings in [Environment options](#environment-options).
 
+### `lenv status [folder]`
+
+Show the current project configuration (PHP, database, webserver, Xdebug) and runtime Xdebug state when Lando is running.
+
+```bash
+lenv status                  # from inside the project folder
+lenv status mysite.lndo.site # from the parent directory
+```
+
 ### `lenv rebuild [folder]`
 
 Re-apply the latest `.lando.yml`, `.lando/php.ini`, `.lando/*.sh`, and `docs/*.md` templates to an existing project, preserving its current settings. Asks whether to keep `README.md` (default: yes). Run `lando rebuild -y` inside the project afterward.
@@ -124,6 +133,15 @@ lenv xdebug status   # show .lando.yml setting and runtime state
 ```
 
 Requires `lando start` to be running. To change the default for new containers, use `lenv update` and run `lando rebuild -y`.
+
+### `lenv remove [folder]`
+
+Permanently remove a project: runs `lando destroy`, then deletes the project folder.
+
+```bash
+lenv remove                  # from inside the project folder
+lenv remove mysite.lndo.site # from the parent directory
+```
 
 ## Documentation
 

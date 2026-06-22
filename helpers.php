@@ -286,12 +286,16 @@ function abort(string $message): void
 function resolve_lenv_project(?string $folder, string $usage): array
 {
     if ($folder) {
+        if (!validate_folder_name($folder)) {
+            abort("Invalid folder name: {$folder}");
+        }
+
         $projectDir = get_project_dir($folder);
         if (!is_dir($projectDir) || !file_exists($projectDir . '/.lando.yml')) {
             abort("Project not found: {$folder}");
         }
 
-        return ['dir' => $projectDir, 'folder' => $folder];
+        return ['dir' => realpath($projectDir), 'folder' => $folder];
     }
 
     $current = detect_current_project();
@@ -300,6 +304,74 @@ function resolve_lenv_project(?string $folder, string $usage): array
     }
 
     return ['dir' => $current['dir'], 'folder' => $current['folder']];
+}
+
+function load_lenv_project(?string $folder, string $usage): array
+{
+    $project = resolve_lenv_project($folder, $usage);
+    $values  = extract_lando_values(file_get_contents($project['dir'] . '/.lando.yml'));
+
+    return array_merge($project, $values);
+}
+
+function format_xdebug_runtime_status(?array $runtime): string
+{
+    if ($runtime === null) {
+        return 'n/a — lando not running';
+    }
+
+    if (!$runtime['loaded']) {
+        return 'disabled';
+    }
+
+    $mode = $runtime['mode'] ?? '';
+
+    return 'enabled' . ($mode !== '' ? " (mode={$mode})" : '');
+}
+
+function print_xdebug_status_lines(string $configured, ?array $runtime): void
+{
+    echo "Xdebug:\n";
+    echo "  configured:  {$configured}\n";
+    echo "  runtime:     " . format_xdebug_runtime_status($runtime) . "\n";
+}
+
+function print_project_status(array $project): void
+{
+    echo "Folder:      {$project['folder']}\n";
+    echo "Path:        {$project['dir']}\n";
+    echo "App name:    {$project['name']}\n";
+    echo "Site URL:    https://{$project['name']}.lndo.site\n";
+    echo "PHP:         {$project['php']}\n";
+    echo "Database:    {$project['database']}\n";
+    echo "Webserver:   {$project['via']}\n";
+    print_xdebug_status_lines($project['xdebug'], get_lando_xdebug_runtime_status($project['dir']));
+}
+
+function destroy_lando_app(string $projectDir): void
+{
+    passthru(
+        'cd ' . escapeshellarg($projectDir) . ' && lando destroy -y 2>/dev/null',
+        $exitCode
+    );
+}
+
+function remove_lenv_project(string $projectDir): void
+{
+    $projectDir = realpath($projectDir);
+
+    if ($projectDir === false || !is_dir($projectDir)) {
+        abort('Project directory not found.');
+    }
+
+    $parentDir = dirname($projectDir);
+    $cwd       = realpath(getcwd());
+
+    if ($cwd === $projectDir || str_starts_with($cwd, $projectDir . DIRECTORY_SEPARATOR)) {
+        chdir($parentDir);
+    }
+
+    remove_tree($projectDir);
 }
 
 function run_lando_tooling(string $projectDir, string $tooling): int

@@ -3,24 +3,10 @@
 
 box('Update Environment Settings');
 
-$targetFolder = $argv[2] ?? null;
-
-if ($targetFolder) {
-    $projectDir = get_project_dir($targetFolder);
-    if (!is_dir($projectDir) || !file_exists($projectDir . '/.lando.yml')) {
-        abort("Project not found: {$targetFolder}");
-    }
-    $folder = $targetFolder;
-} else {
-    $current = detect_current_project();
-    if (!$current) {
-        abort("No project specified and not inside a project folder.\n  Usage: lenv update <folder>");
-    }
-    $projectDir = $current['dir'];
-    $folder     = $current['folder'];
-}
-
-$values = extract_lando_values(file_get_contents($projectDir . '/.lando.yml'));
+$project    = load_lenv_project($argv[2] ?? null, 'lenv update [folder]');
+$projectDir = $project['dir'];
+$folder     = $project['folder'];
+$values     = $project;
 
 echo "Project: {$folder}  (app: {$values['name']})\n\n";
 echo "Current settings:\n\n";

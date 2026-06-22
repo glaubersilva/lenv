@@ -161,8 +161,10 @@ Run these **from the host** to change project configuration (see [docs/environme
 
 | Command              | Description                                           |
 |----------------------|-------------------------------------------------------|
+| `lenv status`        | Show current project configuration                    |
 | `lenv update`        | Change PHP, database, webserver, or Xdebug setting    |
 | `lenv rebuild`       | Re-apply lenv templates; then run `lando rebuild -y`  |
+| `lenv remove`        | Destroy the Lando app and delete this project folder  |
 | `lenv xdebug on`     | Enable Xdebug in the running container (no rebuild)   |
 | `lenv xdebug off`    | Disable Xdebug in the running container (no rebuild)  |
 | `lenv xdebug status` | Show configured vs runtime Xdebug state               |

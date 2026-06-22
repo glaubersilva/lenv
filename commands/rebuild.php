@@ -3,24 +3,11 @@
 
 box('Rebuild Lando Environment');
 
-$targetFolder = $argv[2] ?? null;
+$project    = load_lenv_project($argv[2] ?? null, 'lenv rebuild [folder]');
+$projectDir = $project['dir'];
+$folder     = $project['folder'];
+$values     = $project;
 
-if ($targetFolder) {
-    $projectDir = get_project_dir($targetFolder);
-    if (!is_dir($projectDir) || !file_exists($projectDir . '/.lando.yml')) {
-        abort("Project not found: {$targetFolder}");
-    }
-    $folder = $targetFolder;
-} else {
-    $current = detect_current_project();
-    if (!$current) {
-        abort("No project specified and not inside a project folder.\n  Usage: lenv rebuild <folder>");
-    }
-    $projectDir = $current['dir'];
-    $folder     = $current['folder'];
-}
-
-$values = extract_lando_values(file_get_contents($projectDir . '/.lando.yml'));
 echo "Project: {$folder}  (app: {$values['name']} / php {$values['php']} / {$values['database']} / {$values['via']})\n\n";
 echo "Always overwritten from templates:\n";
 echo "  ✔  .lando.yml       — full template; reapplies name, PHP, database, webserver, xdebug\n";

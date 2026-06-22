@@ -1,0 +1,109 @@
+name: __PROJECT_NAME__
+# lenv-php: '8.3'
+# lenv-database: mysql:8.0
+# lenv-xdebug: off
+
+services:
+  appserver:
+    api: 3
+    type: lando
+    ssl: true
+    sslExpose: false
+    moreHttpPorts:
+      - 8080
+    services:
+      build:
+        context: .
+        dockerfile: docker/frankenphp/Dockerfile
+        args:
+          PHP_VERSION: '8.3'
+        target: dev
+      command: /bin/sh /usr/local/bin/lenv-entrypoint
+      ports:
+        - "8080"
+      volumes:
+        - .:/app
+        - ./docker/dev/Caddyfile:/etc/caddy/Caddyfile
+        - ./docker/dev/entrypoint.sh:/usr/local/bin/lenv-entrypoint
+        - ./.lando/php.ini:/usr/local/etc/php/conf.d/zzzz-lando-xdebug.ini
+        - ./.lando/xdebug-on.sh:/usr/local/bin/lenv-xdebug-on
+        - ./.lando/xdebug-off.sh:/usr/local/bin/lenv-xdebug-off
+      environment:
+        LANDO: "ON"
+        LANDO_WEBROOT: /app
+        SERVER_NAME: ":8080"
+        LENV_XDEBUG: off
+        PHP_IDE_CONFIG: "serverName=__PROJECT_NAME__"
+        GITHUB_TOKEN: ${GITHUB_TOKEN}
+        WP_HOME: "https://__PROJECT_NAME__.lndo.site"
+        WP_SITEURL: "https://__PROJECT_NAME__.lndo.site"
+        DB_HOST: database
+        DB_NAME: wordpress
+        DB_USER: admin
+        DB_PASSWORD: admin
+
+  database:
+    type: mysql:8.0
+    creds:
+      user: admin
+      password: admin
+      database: wordpress
+
+  mailhog:
+    type: mailhog
+    hogfrom:
+      - appserver
+
+  phpmyadmin:
+    type: phpmyadmin
+    hosts:
+      - database
+
+proxy:
+  appserver:
+    - __PROJECT_NAME__.lndo.site:8080
+  mailhog:
+    - mailhog.__PROJECT_NAME__.lndo.site:80
+  phpmyadmin:
+    - phpmyadmin.__PROJECT_NAME__.lndo.site:80
+
+tooling:
+  composer:
+    service: appserver
+    cmd: /bin/sh -c 'test -x /usr/local/bin/composer || (echo "[lenv] Downloading Composer..." && curl -fsSL --proto "=https" --tlsv1.2 https://getcomposer.org/download/latest-stable/composer.phar -o /usr/local/bin/composer && chmod +x /usr/local/bin/composer); exec /usr/local/bin/composer "$@"' _
+    user: root
+    env:
+      XDEBUG_MODE: "off"
+
+  wp:
+    service: appserver
+    cmd: /bin/sh -c 'test -x /usr/local/bin/wp || (echo "[lenv] Downloading WP-CLI..." && curl -fsSL --proto "=https" --tlsv1.2 https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /usr/local/bin/wp && chmod +x /usr/local/bin/wp); exec /usr/local/bin/wp --allow-root "$@"' _
+
+  wp-install:
+    service: appserver
+    description: Download WordPress core and run initial setup
+    cmd:
+      - test -x /usr/local/bin/wp || (echo "[lenv] Downloading WP-CLI..." && curl -fsSL --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /usr/local/bin/wp && chmod +x /usr/local/bin/wp)
+      - test -x /usr/local/bin/composer || (echo "[lenv] Downloading Composer..." && curl -fsSL --proto '=https' --tlsv1.2 https://getcomposer.org/download/latest-stable/composer.phar -o /usr/local/bin/composer && chmod +x /usr/local/bin/composer)
+      - /usr/local/bin/wp core download --allow-root --path=/app
+      - /usr/local/bin/wp config create --allow-root --path=/app --dbname=wordpress --dbuser=admin --dbpass=admin --dbhost=database --force
+      - php /app/.lando/install-wp-config-https.php
+      - /usr/local/bin/wp core install --allow-root --path=/app --url=https://__PROJECT_NAME__.lndo.site --title="__PROJECT_NAME__ Dev" --admin_user=admin --admin_password=admin --admin_email=dev@lndo.site --skip-email
+      - /usr/local/bin/wp rewrite structure --allow-root --path=/app '/%postname%/'
+      - mysql -uroot -h database -e "CREATE DATABASE IF NOT EXISTS wordpress_tests; GRANT ALL PRIVILEGES ON wordpress_tests.* TO 'admin'@'%'; FLUSH PRIVILEGES;"
+      - /usr/local/bin/wp config set WP_DEBUG true --raw --allow-root --path=/app
+      - /usr/local/bin/wp config set WP_DEBUG_LOG true --raw --allow-root --path=/app
+      - /usr/local/bin/wp config set WP_DEBUG_DISPLAY false --raw --allow-root --path=/app
+      - /usr/local/bin/wp config set SCRIPT_DEBUG false --raw --allow-root --path=/app
+
+  xdebug-on:
+    service: appserver
+    description: Enable Xdebug without rebuild.
+    cmd: /bin/sh /usr/local/bin/lenv-xdebug-on
+    user: root
+
+  xdebug-off:
+    service: appserver
+    description: Disable Xdebug without rebuild.
+    cmd: /bin/sh /usr/local/bin/lenv-xdebug-off
+    user: root

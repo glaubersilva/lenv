@@ -69,6 +69,8 @@ Then inside the project: `lando rebuild -y`
 | `lenv new` | Interactive wizard — creates project folder from templates |
 | `lenv rebuild` | Re-applies `.lando.yml`, `.lando/php.ini`, `.lando/*.sh`, and `docs/*.md`; keeps `README.md` unless you opt in to replace it |
 | `lenv update` | Interactive edit of PHP version, database, webserver, and Xdebug in `.lando.yml` |
+| `lenv status` | Show current project configuration (`[folder]` optional) |
+| `lenv remove` | Destroy Lando app and delete project folder (`[folder]` optional) |
 | `lenv xdebug` | Toggle or inspect Xdebug in the running container (`on`, `off`, `status`) |
 
 Validation helpers (`validate_project_name`, `validate_folder_name`) live in `helpers.php`. Project names allow dots (e.g. for `local.*` domains required by some plugin licenses).
