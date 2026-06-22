@@ -1,5 +1,7 @@
 # lenv - local WordPress dev environments with Lando.
 
+> **Early development:** `lenv` is experimental and under active development. Expect breaking changes, rough edges, and docs that may lag behind the code.
+
 CLI and templates for spinning up complete local WordPress development environments with [Lando](https://lando.dev).
 
 Run `lenv new` to scaffold a project folder (e.g. `mysite.lndo.site`), then `cd` into it and run `lando start` and `lando wp-install` — you get a working WordPress site with database tools, email capture, debugging, and WP-CLI ready to go.
