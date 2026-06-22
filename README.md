@@ -14,7 +14,7 @@ Every project created by `lenv new` is a self-contained Lando stack:
 | **Database** | MySQL or MariaDB (configurable), plus a `wordpress_tests` database for PHPUnit |
 | **phpMyAdmin** | Web UI at `http://phpmyadmin.mysite.lndo.site` — credentials `admin` / `admin` |
 | **Mailhog** | Captures all outgoing email at `http://mailhog.mysite.lndo.site` |
-| **Xdebug** | Enabled with `start_with_request=yes` — triggers on every request, no browser extension needed |
+| **Xdebug** | Off by default; enable with `lenv update` or `lenv xdebug on` |
 | **IDE integration** | `PHP_IDE_CONFIG` and path mappings pre-configured for PhpStorm / VS Code |
 | **WP-CLI & Composer** | `lando wp` and `lando composer` run inside the container with the correct PHP |
 | **Diagnostic pages** | `lenv-phpinfo.php` and `lenv-xdebuginfo.php` in the project root |
@@ -65,7 +65,7 @@ Not sure which shell you use? Run `echo $SHELL` — it will say `/bin/zsh` or `/
 ## Quick start
 
 ```bash
-lenv new                  # interactive — name, PHP version, database
+lenv new                  # interactive — see Environment options below
 cd mysite.lndo.site
 lando start
 lando wp-install          # download WordPress, create DB, run initial setup
@@ -73,11 +73,37 @@ lando wp-install          # download WordPress, create DB, run initial setup
 
 Then open `https://mysite.lndo.site` and clone your plugins into `wp-content/plugins/`.
 
+## Environment options
+
+`lenv new` and `lenv update` prompt for the same settings. Press Enter to accept the default shown in brackets.
+
+| Setting | Default (`lenv new`) | Options | Notes |
+|---|---|---|---|
+| **Project name** | — | lowercase letters, numbers, hyphens, dots | Becomes the Lando app name and `{name}.lndo.site` URL |
+| **Folder name** | `{name}.lndo.site` | letters, numbers, hyphens, dots, underscores | Where the project is created on disk |
+| **PHP** | `8.3` | `8.3`, `8.2`, `8.1`, `8.0`, `7.4` | FrankenPHP requires **8.0+** |
+| **Database** | `mysql:8.0` | `mysql:8.0`, `mysql:5.7`, `mariadb:11.4`, `mariadb:10.6` | Changing engine in `lenv update` **destroys data** |
+| **Webserver** | `apache` | `apache`, `nginx`, `litespeed`, `frankenphp` | See below |
+| **Xdebug** | `off` | `off`, `debug` | Use `lenv xdebug on/off` at runtime without rebuild |
+
+### Webservers
+
+| Value | How it runs |
+|---|---|
+| `apache` | Lando `wordpress` recipe (`config.via: apache`) |
+| `nginx` | Lando `wordpress` recipe (`config.via: nginx`) |
+| `litespeed` | Lando `wordpress` recipe (`config.via: litespeed`) — **experimental** on Lando 3.26.x; lenv warns before applying |
+| `frankenphp` | Custom `type: lando` appserver with `docker/frankenphp/` (Caddy + FrankenPHP) |
+
+Switching to or from **FrankenPHP** replaces `.lando.yml` and adds or removes `docker/`. Other webserver changes replace `.lando.yml` only.
+
+After `lenv update`, run `lando rebuild -y` inside the project. Use `lenv rebuild` first if you need the latest templates from this repo.
+
 ## CLI commands
 
 ### `lenv new`
 
-Create a new environment interactively — asks for project name, folder, PHP version, database engine, webserver, and Xdebug (default off).
+Create a new environment interactively — prompts for all settings in [Environment options](#environment-options).
 
 ### `lenv rebuild [folder]`
 
@@ -85,7 +111,7 @@ Re-apply the latest `.lando.yml`, `.lando/php.ini`, `.lando/*.sh`, and `docs/*.m
 
 ### `lenv update [folder]`
 
-Change PHP version, database, webserver, or Xdebug interactively. Run `lando rebuild -y` inside the project afterward.
+Change any [Environment options](#environment-options) on an existing project. Run `lando rebuild -y` inside the project afterward.
 
 ### `lenv xdebug <on|off|status> [folder]`
 
