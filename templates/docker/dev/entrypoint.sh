@@ -8,8 +8,11 @@ if command -v composer >/dev/null 2>&1; then
 fi
 
 if [ "${LENV_XDEBUG:-off}" = "off" ]; then
-  /bin/sh /usr/local/bin/lenv-xdebug-off 2>/dev/null || true
+  /bin/sh /app/.lando/xdebug-off.sh 2>/dev/null || true
 fi
+
+echo "[lenv] Ensuring database credentials..."
+/bin/sh /app/.lando/ensure-db-creds.sh
 
 echo "[lenv] Waiting for database..."
 until php -r "new PDO('mysql:host=database;dbname=wordpress', 'admin', 'admin');" 2>/dev/null; do

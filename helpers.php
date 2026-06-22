@@ -220,7 +220,7 @@ function sync_lando_scripts(string $projectDir): void
         mkdir($projectDir . '/.lando', 0755, true);
     }
 
-    foreach (['install-wp-config-https.php', 'xdebug-on.sh', 'xdebug-off.sh'] as $script) {
+    foreach (['install-wp-config-https.php', 'ensure-db-creds.sh', 'xdebug-on.sh', 'xdebug-off.sh'] as $script) {
         copy(TEMPLATE_DIR . '/.lando/' . $script, $projectDir . '/.lando/' . $script);
     }
 }

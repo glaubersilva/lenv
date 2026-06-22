@@ -49,6 +49,27 @@ lando logs -s appserver
 
 ---
 
+## Database `1045 Access denied` after `lando rebuild`
+
+Symptom: `lando wp-install`, phpMyAdmin healthcheck, or `lando start` fails with:
+
+```
+Access denied for user 'admin'@'...' (using password: YES)
+```
+
+**Cause:** The MySQL **data volume persisted** from an older setup (often with Lando's default user `wordpress`, not `admin`). Changing `services.database.creds` in `.lando.yml` does not update users inside an existing volume.
+
+**Fix:** Current lenv templates run `.lando/ensure-db-creds.sh` on appserver start and at the beginning of `lando wp-install` to create/sync the `admin` user. After `lenv rebuild`, run:
+
+```bash
+lando rebuild -y
+lando wp-install
+```
+
+If the script is missing from an older project, run `lenv rebuild` to sync `.lando/ensure-db-creds.sh`, then rebuild Lando again.
+
+---
+
 ## WSL2 and Docker
 
 > **Windows + WSL2 only.** These issues apply to running Lando inside WSL2 with Docker Desktop on Windows — [officially supported by Lando](https://docs.lando.dev/install/wsl.html), but WSL2 ↔ Windows interop is fragile, especially after Docker Desktop or Windows updates.

@@ -27,6 +27,7 @@ lenv/
     .lando/
       php.ini                    <- Xdebug config (empty stub when xdebug is off)
       install-wp-config-https.php <- inject HTTPS detection into wp-config.php
+      ensure-db-creds.sh         <- sync admin/admin MySQL user on stale volumes
       xdebug-on.sh               <- runtime Xdebug enable script
       xdebug-off.sh              <- runtime Xdebug disable script
     README.md       <- project README template
