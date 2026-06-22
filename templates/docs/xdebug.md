@@ -157,7 +157,17 @@ lando xdebug-on
 lando xdebug-off
 ```
 
-Use `lenv xdebug status` to compare the `.lando.yml` setting with the running container. On FrankenPHP, the extension is installed in the image — `off` disables it at container start, but a previous `lenv xdebug on` lasts until restart or `lenv xdebug off`.
+Use `lenv xdebug status` to compare the configured (`.lando.yml`) and runtime (container) state:
+
+```
+Xdebug:
+  configured:  off
+  runtime:     disabled
+```
+
+When Lando is not running, runtime shows `n/a — lando not running`.
+
+On FrankenPHP, the extension is installed in the image — `off` disables it at container start, but a previous `lenv xdebug on` lasts until restart or `lenv xdebug off`.
 
 ---
 

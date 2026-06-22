@@ -28,6 +28,22 @@ Both platforms share the same templates. Differences are handled inside the cont
 
 `lenv new` and `lenv update` support all four options. Switching to or from FrankenPHP replaces `.lando.yml` and syncs or removes `docker/`.
 
+### Project names with dots
+
+Lando's default recipe proxy strips dots from the app name (`local.mysite` → `localmysite.lndo.site`). lenv registers `proxy.appserver: __PROJECT_NAME__.lndo.site` in the wordpress recipe template so the documented URL matches WordPress `siteurl` / `home`. FrankenPHP already used an explicit appserver proxy.
+
+### lenv CLI (host-side)
+
+| Command | Notes |
+|---|---|
+| `lenv status [folder]` | Project config; Xdebug shows `configured` vs `runtime` |
+| `lenv update [folder]` | Change PHP, database, webserver, Xdebug |
+| `lenv rebuild [folder]` | Re-sync templates from this repo |
+| `lenv remove [folder]` | `lando destroy` + delete project folder |
+| `lenv xdebug on/off/status [folder]` | Runtime Xdebug toggle |
+
+All except `new` accept optional `[folder]` — run inside the project or pass the folder name from the parent directory.
+
 ---
 
 ## Two layers of problems
@@ -217,6 +233,7 @@ These are real differences users encounter but are outside what templates can fi
 - **LocalWP conflict** — both bind ports 80/443 via Lando proxy; not lenv-specific
 - **Stale Lando proxy** after interrupted `lando start` — `docker rm` + `network prune`
 - **Keep Lando and Docker Desktop in sync** — run `lando update` after Docker Desktop updates
+- **FrankenPHP startup 404** — appserver may return 404 for 10–30 seconds after `lando start`; wait and refresh (cosmetic healthcheck `[404]` is the same timing issue)
 
 ---
 
@@ -224,11 +241,12 @@ These are real differences users encounter but are outside what templates can fi
 
 Once `lando start` completes successfully:
 
-- URLs: `https://{name}.lndo.site`, phpMyAdmin, Mailhog
+- URLs: `https://{name}.lndo.site`, phpMyAdmin, Mailhog (dots in `{name}` preserved when using current templates)
 - Credentials: `admin` / `admin`
 - Commands: `lando wp`, `lando composer`, `lando wp-install`
+- Host CLI: `lenv status`, `lenv update`, `lenv rebuild`, `lenv remove`, `lenv xdebug`
 - Databases: `wordpress` + `wordpress_tests`
-- Xdebug toggle via `.lando.yml`
+- Xdebug toggle via `.lando.yml` or `lenv xdebug on/off`
 - Private package auth via `GITHUB_TOKEN` env var
 
 The goal of the runtime-download approach is that **Layer 2 behaves the same everywhere**. Remaining differences are Layer 1 (Lando host) or IDE setup.

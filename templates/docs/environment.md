@@ -3,11 +3,21 @@
 The easiest way to change environment settings is with the CLI:
 
 ```bash
-lenv update <project-folder>
+lenv update              # from inside the project folder
+lenv update mysite.lndo.site   # from the parent directory
 ```
 
 This walks you through changing PHP version, database, webserver, and Xdebug interactively,
 then updates `.lando.yml` and tells you when to run `lando rebuild -y`.
+
+Other host-side commands:
+
+| Command | Purpose |
+|---|---|
+| `lenv status [folder]` | Show current PHP, database, webserver, and Xdebug settings |
+| `lenv rebuild [folder]` | Re-apply lenv templates; then run `lando rebuild -y` |
+| `lenv remove [folder]` | Destroy the Lando app and delete the project folder |
+| `lenv xdebug on/off/status [folder]` | Toggle or inspect runtime Xdebug |
 
 Xdebug defaults to **off** in `lenv new`. Use `lenv update` to change it later.
 
@@ -90,7 +100,8 @@ config:
 Change interactively:
 
 ```bash
-lenv update <project-folder>
+lenv update              # from inside the project folder
+lenv update mysite.lndo.site   # from the parent directory
 ```
 
 ### Options
@@ -152,6 +163,16 @@ lenv xdebug status
 ```
 
 Set the persistent default with `lenv update`, then `lando rebuild -y`.
+
+**Startup timing:** FrankenPHP may return **404** for 10–30 seconds right after `lando start`. Wait and refresh — this is normal. `lando start` may also show `[404]` in the appserver healthcheck during the same window.
+
+---
+
+## Project names with dots
+
+Project names can include dots (e.g. `local.mysite`) when a plugin license requires a `local.*` domain. The site URL is always `https://{name}.lndo.site`.
+
+lenv registers an explicit `proxy.appserver` hostname so Lando routes the dotted URL correctly. Always use the URL documented in this project's README — not Lando's auto-generated hostname with dots stripped (e.g. `localmysite` instead of `local.mysite`).
 
 ---
 

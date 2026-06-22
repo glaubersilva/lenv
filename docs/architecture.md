@@ -10,8 +10,10 @@ lenv/
   helpers.php       <- shared utilities
   commands/
     new.php         <- lenv new
-    rebuild.php     <- lenv rebuild [folder]
+    status.php      <- lenv status [folder]
     update.php      <- lenv update [folder]
+    rebuild.php     <- lenv rebuild [folder]
+    remove.php      <- lenv remove [folder]
     xdebug.php      <- lenv xdebug <on|off|status> [folder]
   templates/
     .lando.yml          <- WordPress recipe template (apache, nginx, litespeed)
@@ -67,11 +69,22 @@ Then inside the project: `lando rebuild -y`
 | Command | What it does |
 |---|---|
 | `lenv new` | Interactive wizard — creates project folder from templates |
-| `lenv rebuild` | Re-applies `.lando.yml`, `.lando/php.ini`, `.lando/*.sh`, and `docs/*.md`; keeps `README.md` unless you opt in to replace it |
+| `lenv status` | Show current project configuration and Xdebug state (`[folder]` optional) |
 | `lenv update` | Interactive edit of PHP version, database, webserver, and Xdebug in `.lando.yml` |
-| `lenv status` | Show current project configuration (`[folder]` optional) |
-| `lenv remove` | Destroy Lando app and delete project folder (`[folder]` optional) |
+| `lenv rebuild` | Re-applies `.lando.yml`, `.lando/php.ini`, `.lando/*.sh`, and `docs/*.md`; keeps `README.md` unless you opt in to replace it |
+| `lenv remove` | Runs `lando destroy`, then deletes the project folder; asks for confirmation (default: no) |
 | `lenv xdebug` | Toggle or inspect Xdebug in the running container (`on`, `off`, `status`) |
+
+### `[folder]` argument
+
+`status`, `update`, `rebuild`, `remove`, and `xdebug` share `load_lenv_project()` in `helpers.php`. Run from **inside the project** (cwd contains `.lando.yml`) or from the **parent directory** with the folder name:
+
+```bash
+lenv status                  # inside the project
+lenv status mysite.lndo.site # from the parent directory
+```
+
+For `xdebug`, the folder comes after the action: `lenv xdebug status mysite.lndo.site`. `new` does not accept `[folder]`.
 
 Validation helpers (`validate_project_name`, `validate_folder_name`) live in `helpers.php`. Project names allow dots (e.g. for `local.*` domains required by some plugin licenses).
 
@@ -91,11 +104,13 @@ Validation helpers (`validate_project_name`, `validate_folder_name`) live in `he
 | Xdebug off | Lando recipe disables extension | `LENV_XDEBUG=off` env + `lenv-xdebug-off` in entrypoint (image still builds with Xdebug) |
 | Site URL env | `proxy.appserver` registers `__PROJECT_NAME__.lndo.site` (dots preserved) | `WP_HOME` / `WP_SITEURL` in appserver environment |
 
-Lando's default recipe proxy **strips dots** from the app name (`local.4hlib` → `local4hlib.lndo.site`). lenv registers an explicit `proxy.appserver` hostname so project names with dots (e.g. `local.*` for plugin licensing) resolve to the documented URL.
+Lando's default recipe proxy **strips dots** from the app name (`local.mysite` → `localmysite.lndo.site`). lenv registers an explicit `proxy.appserver` hostname so project names with dots (e.g. `local.*` for plugin licensing) resolve to the documented URL.
 
 Switching to or from FrankenPHP replaces `.lando.yml` and adds or removes `docker/`. Database data is preserved; only changing the **database engine** destroys data.
 
-LiteSpeed remains in the recipe template but is **experimental** on Lando 3.26.x — `lenv` warns before applying (see `platforms.md`).
+LiteSpeed remains in the recipe template but is **experimental** on Lando 3.26.x — `lenv` warns before applying (see `platforms.md` and the Known issues section in the repo `README.md`).
+
+FrankenPHP may return **404** for 10–30 seconds after `lando start` while the appserver warms up — documented in `README.md` and `templates/docs/troubleshooting.md`.
 
 ## HTTPS behind Lando proxy
 

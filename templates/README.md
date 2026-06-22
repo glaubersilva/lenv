@@ -157,7 +157,7 @@ Then `lando rebuild -y` — the run script auto-configures Composer auth inside 
 
 ## lenv commands
 
-Run these **from the host** to change project configuration (see [docs/environment.md](docs/environment.md)):
+Run these **from the host** to change project configuration (see [docs/environment.md](docs/environment.md)). Most commands accept an optional `[folder]` — run inside the project or pass the folder name from the parent directory (e.g. `lenv status __PROJECT_NAME__.lndo.site`).
 
 | Command              | Description                                           |
 |----------------------|-------------------------------------------------------|

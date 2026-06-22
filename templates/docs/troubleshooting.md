@@ -236,3 +236,37 @@ docker info
 ```
 
 If it returns engine info, the integration is working and `lando start` should succeed.
+
+---
+
+## Site 404, CORS errors, or can't log in (dotted project name)
+
+Symptom: project name contains a dot (e.g. `local.mysite`), the README says `https://local.mysite.lndo.site`, but:
+
+- `wp-login.php` returns **404**, or
+- the site loads but the browser console shows **CORS** errors loading CSS/JS from a different hostname (often with dots stripped: `localmysite.lndo.site` vs `local.mysite.lndo.site`)
+
+**Cause:** Lando's default recipe proxy strips dots from the app name. WordPress is installed with the documented URL, but the proxy may only route the sanitized hostname unless `proxy.appserver` is set explicitly (current lenv templates do this).
+
+**Fix:**
+
+```bash
+lenv rebuild
+lando rebuild -y
+```
+
+Confirm `lando info` lists `https://{your-name}.lndo.site` under appserver URLs. Always browse the **documented** URL from this README.
+
+---
+
+## FrankenPHP — 404 right after `lando start`
+
+Symptom: FrankenPHP environment returns **404** in the browser or `[404]` in the `lando start` vitals table immediately after startup.
+
+**Cause:** FrankenPHP takes a few seconds to become ready. This is a startup timing issue, not a broken project.
+
+**Fix:** Wait 10–30 seconds and refresh. If it still fails after a minute:
+
+```bash
+lando logs -s appserver
+```
