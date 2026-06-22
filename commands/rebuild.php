@@ -11,7 +11,7 @@ $values     = $project;
 echo "Project: {$folder}  (app: {$values['name']} / php {$values['php']} / {$values['database']} / {$values['via']})\n\n";
 echo "Always overwritten from templates:\n";
 echo "  ✔  .lando.yml       — full template; reapplies name, PHP, database, webserver, xdebug\n";
-echo "  ✔  .lando/php.ini   — full template\n";
+echo "  ✔  .lando/php.ini   — template base (+ php-xdebug.ini when xdebug is debug)\n";
 echo "  ✔  .lando/xdebug-*.sh — runtime Xdebug toggle scripts\n";
 echo "  ✔  .lando/ensure-dev-extensions.sh — uopz + Git safe.directory\n";
 if (is_frankenphp_webserver($values['via'])) {

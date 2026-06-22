@@ -111,6 +111,43 @@ If the script is missing from an older project, `lenv rebuild` copies `.lando/en
 
 ---
 
+## Admin fatal — `call_user_func(): function "die" not found`
+
+Symptom: a WordPress **admin** page fatals after installing plugin dependencies or enabling `uopz`:
+
+```text
+PHP Fatal error: call_user_func(): Argument #1 ($callback) must be a valid callback,
+function "die" not found or invalid function name
+```
+
+Stack traces often mention a plugin helper such as `tribe_exit()` — common in StellarWP / The Events Calendar family plugins that redirect during admin bootstrap.
+
+**Cause:** lenv installs the **`uopz`** extension (for `composer install` / plugin test suites). By default **`uopz.exit=0`**, which disables PHP `exit`/`die`. Code that calls `exit()` after a redirect is blocked, falls through to `call_user_func('die')`, and fatals because `die` is not callable under uopz.
+
+**Fix:** lenv projects should ship `uopz.exit=1` in `.lando/php.ini` (from the lenv template). Sync templates and restart:
+
+```bash
+lenv rebuild
+lando rebuild -y
+lando restart -s appserver
+```
+
+Or add manually to `.lando/php.ini`:
+
+```ini
+uopz.exit=1
+```
+
+Verify:
+
+```bash
+lando php -i | grep uopz.exit    # should show => 1 => 1
+```
+
+**Note:** When `xdebug: off` in `.lando.yml`, `.lando/php.ini` still contains `uopz.exit` but not Xdebug directives. Enable Xdebug at runtime with `lenv xdebug on` (see [xdebug.md](xdebug.md)), or set `xdebug: debug` in `lenv update` and `lando rebuild -y`.
+
+---
+
 ## WSL2 and Docker
 
 > **Windows + WSL2 only.** These issues apply to running Lando inside WSL2 with Docker Desktop on Windows — [officially supported by Lando](https://docs.lando.dev/install/wsl.html), but WSL2 ↔ Windows interop is fragile, especially after Docker Desktop or Windows updates.

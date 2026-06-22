@@ -25,7 +25,8 @@ lenv/
       dev/Caddyfile
       dev/entrypoint.sh
     .lando/
-      php.ini                    <- Xdebug config (empty stub when xdebug is off)
+      php.ini                    <- base template (always); project copy may append php-xdebug.ini
+      php-xdebug.ini             <- appended when xdebug is debug in .lando.yml
       install-wp-config-https.php <- inject HTTPS detection into wp-config.php
       ensure-db-creds.sh         <- sync admin/admin MySQL user on stale volumes
       ensure-dev-extensions.sh   <- uopz + Git safe.directory for plugin dev (WSL)

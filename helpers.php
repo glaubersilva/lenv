@@ -231,12 +231,13 @@ function sync_lando_php_ini(string $projectDir, string $xdebug): void
         mkdir($projectDir . '/.lando', 0755, true);
     }
 
-    if ($xdebug === 'off') {
-        file_put_contents($projectDir . '/.lando/php.ini', ";\n");
-        return;
+    $ini = rtrim(file_get_contents(TEMPLATE_DIR . '/.lando/php.ini')) . "\n";
+
+    if ($xdebug === 'debug') {
+        $ini .= "\n" . file_get_contents(TEMPLATE_DIR . '/.lando/php-xdebug.ini');
     }
 
-    copy(TEMPLATE_DIR . '/.lando/php.ini', $projectDir . '/.lando/php.ini');
+    file_put_contents($projectDir . '/.lando/php.ini', $ini);
 }
 
 function write_project_lando(string $projectDir, array $values, array $extra = []): void
