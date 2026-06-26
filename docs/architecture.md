@@ -85,7 +85,7 @@ Then inside the project: `lando rebuild -y`
 | `lenv update` | Interactive edit of PHP version, database, webserver, and Xdebug in `.lando.yml` |
 | `lenv rebuild` | Re-applies `.lando.yml`, `.lando/php.ini`, `.lando/*.sh`, and `docs/*.md`; keeps `README.md` unless you opt in to replace it |
 | `lenv remove` | Runs `lando destroy`, then deletes the project folder; asks for confirmation (default: no) |
-| `lenv doctor` | Check Docker/Lando/WSL readiness and orphan build-engine files |
+| `lenv doctor` | Check Docker/Lando/WSL readiness; orphan build-engine `.exe` files are warnings only |
 | `lenv fix` | WSL2 recovery wrapper (clean orphans, `lando update`, then `lando start`) |
 | `lenv xdebug` | Toggle or inspect Xdebug in the running container (`on`, `off`, `status`) |
 
@@ -151,6 +151,31 @@ lando ssh -s appserver -c "php /app/.lando/install-wp-config-https.php"
 ```
 
 Or re-run the HTTPS-related `wp-install` step after `lenv rebuild` copies the file into `.lando/`.
+
+### WordPress rewrite flush (`ensure-wp-rewrites.sh`)
+
+**Location:** `templates/.lando/ensure-wp-rewrites.sh`  
+**Synced by:** `lenv new`, `lenv rebuild` (via `sync_lando_scripts()`)  
+**Run by:** `lando wp-install` on every webserver, after permalink structure and debug constants:
+
+```yaml
+- /bin/sh /app/.lando/ensure-wp-rewrites.sh
+```
+
+The script:
+
+1. **Always** runs `wp rewrite flush --hard` so WordPress persists rewrite rules in the database (Apache, Nginx, LiteSpeed, and FrankenPHP).
+2. **Only when** `config.via` is `apache`, writes the standard WordPress `.htaccess` if it is still missing (WP-CLI often cannot create it in Lando even with `--hard`).
+
+Nginx, LiteSpeed, and FrankenPHP do not use `.htaccess`; their rewrites are handled by the web server config inside Lando. Step 2 is the Apache-specific part.
+
+Without `.htaccess` on Apache, `/wp-json/` and other pretty URLs return 404 HTML, which breaks REST API consumers in the admin and block editor.
+
+**Existing projects** can run it once:
+
+```bash
+lando ssh -s appserver -c "/bin/sh /app/.lando/ensure-wp-rewrites.sh"
+```
 
 ### Dev PHP extensions and Git (`ensure-dev-extensions.sh`)
 

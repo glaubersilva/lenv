@@ -132,6 +132,8 @@ lando rebuild -y
 
 For local development, the choice has no practical impact. Apache is recommended unless you need to match a specific production Nginx configuration.
 
+`lando wp-install` runs `.lando/ensure-wp-rewrites.sh` at the end on **every** webserver: it always flushes rewrite rules with `wp rewrite flush --hard`. When Apache is selected, it also creates `/app/.htaccess` if WP-CLI cannot write it (common in Lando). Without that file on Apache, pretty permalinks and `/wp-json/` REST routes return 404.
+
 ### LiteSpeed
 
 Available in `lenv new` and `lenv update`, but **experimental**. The Lando wordpress recipe advertises `via: litespeed`, yet Lando 3.26.x currently fails at `lando rebuild` with:

@@ -14,6 +14,7 @@ echo "  ✔  .lando.yml       — full template; reapplies name, PHP, database, 
 echo "  ✔  .lando/php.ini   — template base (+ php-xdebug.ini when xdebug is debug)\n";
 echo "  ✔  .lando/xdebug-*.sh — runtime Xdebug toggle scripts\n";
 echo "  ✔  .lando/ensure-dev-extensions.sh — uopz + Git safe.directory\n";
+echo "  ✔  .lando/ensure-wp-rewrites.sh — rewrite flush + Apache .htaccess\n";
 if (is_frankenphp_webserver($values['via'])) {
     echo "  ✔  docker/          — FrankenPHP Dockerfile, Caddyfile, entrypoint\n";
 }

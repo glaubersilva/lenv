@@ -160,7 +160,7 @@ Permanently remove a project: runs `lando destroy`, then deletes the project fol
 
 ### `lenv doctor [folder]`
 
-Check host and project readiness: Docker, Lando version, PowerShell/wslvar on WSL2, and orphan `.exe` files. Run this when `lando start` fails with *Could not automatically start Docker* even though Docker Desktop is running.
+Check host and project readiness: Docker, Lando version, PowerShell/wslvar on WSL2, and orphan `.exe` files (shown as a warning only — not a blocking error). Run this when `lando start` fails with *Could not automatically start Docker* even though Docker Desktop is running.
 
 ### `lenv fix [folder]`
 

@@ -40,7 +40,7 @@ Lando's default recipe proxy strips dots from the app name (`local.mysite` → `
 | `lenv update [folder]` | Change PHP, database, webserver, Xdebug |
 | `lenv rebuild [folder]` | Re-sync templates from this repo |
 | `lenv remove [folder]` | `lando destroy` + delete project folder |
-| `lenv doctor [folder]` | Preflight checks for Layer 1 issues (Docker, PowerShell, orphan `.exe`) |
+| `lenv doctor [folder]` | Preflight checks for Layer 1 issues (Docker, PowerShell); orphan `.exe` files are warnings only |
 | `lenv fix [folder]` | WSL2 recovery — clean orphans, `lando update`, then `lando start` |
 | `lenv xdebug on/off/status [folder]` | Runtime Xdebug toggle |
 
@@ -218,7 +218,7 @@ These are real differences users encounter but are outside what templates can fi
 
 ### WSL2 only
 
-- **Lando build engine** downloads a Windows `.exe` on failure — see troubleshooting doc; `lenv doctor` detects orphans and `lenv fix` removes them
+- **Lando build engine** downloads a Windows `.exe` on failure — see troubleshooting doc; `lenv doctor` warns about orphans (optional cleanup via `lenv fix`)
 - **Docker WSL integration** silently disabled after Windows/Docker updates
 - **vsock timeouts** between WSL and Windows host — try `wsl --shutdown` first; if interop stays broken, double-click `scripts/windows/fix-wsl-interop.bat` as Administrator on Windows
 - **PATH corruption** if shell config edited via Git Bash instead of WSL terminal

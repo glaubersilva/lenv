@@ -93,6 +93,7 @@ tooling:
       - /usr/local/bin/wp config set WP_DEBUG_LOG true --raw --allow-root --path=/app
       - /usr/local/bin/wp config set WP_DEBUG_DISPLAY false --raw --allow-root --path=/app
       - /usr/local/bin/wp config set SCRIPT_DEBUG false --raw --allow-root --path=/app
+      - /bin/sh /app/.lando/ensure-wp-rewrites.sh
 
   xdebug-on:
     service: appserver

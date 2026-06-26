@@ -70,6 +70,24 @@ If the script is missing from an older project, run `lenv rebuild` to sync `.lan
 
 ---
 
+## `/wp-json/` returns 404 or REST API "not a valid JSON response"
+
+Symptom: plugins or the block editor fail with **The response is not a valid JSON response**, or `https://{project}.lndo.site/wp-json/` returns **404** HTML.
+
+**Cause:** WordPress pretty permalinks are set (`/%postname%/`) but Apache has no `.htaccess` rewrite rules. WP-CLI's `rewrite flush --hard` often warns that it cannot regenerate `.htaccess` inside Lando.
+
+**Fix:** Current lenv templates run `.lando/ensure-wp-rewrites.sh` at the end of `lando wp-install`. After `lenv rebuild`, either re-run install steps or run the script once:
+
+```bash
+lenv rebuild
+lando rebuild -y
+lando ssh -s appserver -c "/bin/sh /app/.lando/ensure-wp-rewrites.sh"
+```
+
+Confirm `https://{project}.lndo.site/wp-json/` returns JSON (HTTP 200).
+
+---
+
 ## `composer install` fails — missing `ext-uopz` or Git dubious ownership
 
 Symptom: inside a cloned plugin (e.g. The Events Calendar), `lando composer install` or host `composer install` fails with:
@@ -340,6 +358,8 @@ K58YAZfWBRjnr_zB_06NR.exe
 ```
 
 **What they are:** partial downloads of Lando's Windows build engine from a failed `setup-build-engine` step — usually caused by broken WSL interop (see [Recovery ladder](#recovery-ladder) above). Each failed attempt can leave another copy. They are harmless, not malware — do not commit them to git (add `*.exe` to your own `.gitignore` if needed).
+
+**`lenv doctor`:** lists them as a **warning** (⚠), not a blocking error — exit code stays 0 when Docker, Lando, and PowerShell are healthy.
 
 **Clean up:** `find . -maxdepth 1 -name '*.exe' -delete` or run `lenv fix`.
 

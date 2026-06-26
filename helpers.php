@@ -220,7 +220,7 @@ function sync_lando_scripts(string $projectDir): void
         mkdir($projectDir . '/.lando', 0755, true);
     }
 
-    foreach (['install-wp-config-https.php', 'ensure-db-creds.sh', 'ensure-dev-extensions.sh', 'xdebug-on.sh', 'xdebug-off.sh'] as $script) {
+    foreach (['install-wp-config-https.php', 'ensure-db-creds.sh', 'ensure-dev-extensions.sh', 'ensure-wp-rewrites.sh', 'xdebug-on.sh', 'xdebug-off.sh'] as $script) {
         copy(TEMPLATE_DIR . '/.lando/' . $script, $projectDir . '/.lando/' . $script);
     }
 }
@@ -543,7 +543,8 @@ function print_doctor_check(string $label, bool $ok, string $detail, bool $warn 
 
 function run_lando_doctor_checks(?array $project = null): int
 {
-    $issues = 0;
+    $issues   = 0;
+    $warnings = 0;
 
     echo "Host checks\n";
 
@@ -598,15 +599,20 @@ function run_lando_doctor_checks(?array $project = null): int
             print_doctor_check(
                 'Build engine orphans',
                 false,
-                count($exes) . ' file(s), ' . format_bytes($totalBytes) . ' — run lenv fix or find . -maxdepth 1 -name \'*.exe\' -delete'
+                count($exes) . ' file(s), ' . format_bytes($totalBytes) . ' — optional cleanup: lenv fix or find . -maxdepth 1 -name \'*.exe\' -delete',
+                true
             );
-            $issues++;
+            $warnings++;
         }
     }
 
     echo "\n";
     if ($issues === 0) {
-        echo "All checks passed.\n";
+        if ($warnings > 0) {
+            echo "All critical checks passed ({$warnings} warning(s) above).\n";
+        } else {
+            echo "All checks passed.\n";
+        }
         if (is_wsl()) {
             echo "Use `lando start` day to day. Run `lenv fix` when recovering from WSL2/Docker issues.\n";
         }
