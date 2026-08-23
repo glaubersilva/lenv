@@ -36,10 +36,16 @@ Project names can include dots (e.g. `local.mysite`) when a plugin requires a `l
 
 ## Requirements
 
+- [PHP CLI](https://www.php.net) — the `lenv` script itself is a PHP script; only `php-cli` is needed on the host (WordPress runs inside Lando containers):
+  - Ubuntu / Debian / Mint: `sudo apt install php-cli`
+  - Fedora: `sudo dnf install php-cli`
+  - macOS (Homebrew): `brew install php`
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - [Lando](https://lando.dev)
 
 **Windows:** WSL2 with **Ubuntu** and Docker Desktop WSL integration enabled (Settings → Resources → WSL Integration). If WSL ↔ Windows interop breaks (`UtilAcceptVsock`), see [`scripts/windows/`](scripts/windows/) and each project's `docs/troubleshooting.md`.
+
+> **Troubleshooting:** if `lenv` fails with ``/usr/bin/env: ‘php’: No such file or directory``, PHP is not installed on the host — see [Requirements](#requirements).
 
 ## Setup
 
