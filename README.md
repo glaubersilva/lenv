@@ -142,7 +142,31 @@ lenv status                  # from inside the project folder
 lenv status mysite.lndo.site # from the parent directory
 ```
 
-Commands that support `[folder]`: **`status`**, **`update`**, **`rebuild`**, **`remove`**, **`doctor`**, **`fix`**, and **`xdebug`** (folder comes after `on`, `off`, or `status`). **`new`** does not — it creates a project interactively.
+Commands that support `[folder]`: **`status`**, **`update`**, **`rebuild`**, **`remove`**, **`doctor`**, **`fix`**, and **`xdebug`** (folder comes after `on`, `off`, or `status`). **`new`** and **`cert`** do not — `new` creates a project interactively and `cert` operates on the host's Lando certificates.
+
+### `lenv cert [status]`
+
+Install the Lando CA (`~/.lando/certs/LandoCA.crt`) into the host system trust store so browsers treat `https://*.lndo.site` as valid HTTPS instead of showing the **"not secure"** warning.
+
+```bash
+lenv cert            # installs the CA (prompts for sudo password)
+lenv cert status     # check whether the CA is already trusted
+```
+
+Supported platforms and what the command does:
+
+| Platform | Method |
+|---|---|
+| Debian / Ubuntu / Mint | Copy to `/usr/local/share/ca-certificates/` + `update-ca-certificates` + add to the browser NSS database |
+| Arch / Manjaro | Copy to `/etc/ca-certificates/trust-source/anchors/` + `trust extract-compat` + add to the browser NSS database |
+| Fedora / RHEL / CentOS | Copy to `/etc/pki/ca-trust/source/anchors/` + `update-ca-trust` + add to the browser NSS database |
+| openSUSE | Copy to `/etc/pki/trust/anchors/` + `update-ca-certificates` + add to the browser NSS database |
+| macOS | `security add-trusted-cert` into the System keychain |
+| WSL2 | Prints instructions — browsers read the **Windows** certificate store, which Lando populates automatically |
+
+On Linux, Chromium/Edge do **not** read `/etc/ssl/certs` — they use the NSS database (`~/.pki/nssdb`). `lenv cert` adds the CA there too (via `certutil`), so Chromium/Edge validate Lando sites after a browser restart.
+
+> **Firefox** keeps its own certificate store. Even after `lenv cert`, import `LandoCA.crt` manually under Settings → Privacy & Security → Certificates → View Certificates → Authorities. The command prints these steps.
 
 ### `lenv new`
 

@@ -19,6 +19,7 @@ if ($command === 'help' || $command === '--help' || !file_exists($commandFile)) 
     echo "  remove [folder]          Destroy the Lando app and delete the project folder\n";
     echo "  doctor [folder]          Check Docker/Lando/WSL readiness and orphan build engines\n";
     echo "  fix [folder]             WSL2 recovery: clean orphans, lando update, then lando start\n";
+    echo "  cert [status]            Trust the Lando CA so https://*.lndo.site is valid HTTPS\n";
     echo "  xdebug <on|off|status> [folder]  Toggle or inspect Xdebug in the running container\n\n";
     echo "If [folder] is omitted, the command runs on the current directory\n";
     echo "when it contains a .lando.yml file, or from the parent directory when\n";

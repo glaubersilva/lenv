@@ -185,6 +185,7 @@ Run these **from the host** to change project configuration (see [docs/environme
 | `lenv remove`        | Destroy the Lando app and delete this project folder  |
 | `lenv doctor`        | Check Docker/Lando/WSL readiness before start         |
 | `lenv fix`           | WSL2 recovery: clean orphans, `lando update`, then `lando start` |
+| `lenv cert`          | Trust the Lando CA in the system store so HTTPS has no browser warning |
 | `lenv xdebug on`     | Enable Xdebug in the running container (no rebuild)   |
 | `lenv xdebug off`    | Disable Xdebug in the running container (no rebuild)  |
 | `lenv xdebug status` | Show configured vs runtime Xdebug state               |

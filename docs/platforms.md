@@ -42,9 +42,10 @@ Lando's default recipe proxy strips dots from the app name (`local.mysite` → `
 | `lenv remove [folder]` | `lando destroy` + delete project folder |
 | `lenv doctor [folder]` | Preflight checks for Layer 1 issues (Docker, PowerShell); orphan `.exe` files are warnings only |
 | `lenv fix [folder]` | WSL2 recovery — clean orphans, `lando update`, then `lando start` |
+| `lenv cert [status]` | Trust the Lando CA in the host system store so `https://*.lndo.site` is valid HTTPS |
 | `lenv xdebug on/off/status [folder]` | Runtime Xdebug toggle |
 
-All except `new` accept optional `[folder]` — run inside the project or pass the folder name from the parent directory.
+All except `new` and `cert` accept optional `[folder]` — run inside the project or pass the folder name from the parent directory.
 
 ---
 

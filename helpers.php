@@ -714,6 +714,230 @@ PHP;
     return is_array($decoded) ? $decoded : null;
 }
 
+function is_macos(): bool
+{
+    return PHP_OS_FAMILY === 'Darwin';
+}
+
+function get_linux_os_release(): array
+{
+    if (!is_file('/etc/os-release')) {
+        return [];
+    }
+
+    $values = [];
+    foreach (file('/etc/os-release', FILE_IGNORE_NEW_LINES) as $line) {
+        if (str_contains($line, '=')) {
+            [$key, $value] = explode('=', $line, 2);
+            $values[trim($key)] = trim($value, '"\'');
+        }
+    }
+
+    return $values;
+}
+
+function get_linux_distro_id(): string
+{
+    return strtolower(get_linux_os_release()['ID'] ?? '');
+}
+
+function get_linux_distro_id_like(): string
+{
+    return strtolower(get_linux_os_release()['ID_LIKE'] ?? '');
+}
+
+function linux_distro_matches(array $ids): bool
+{
+    if (in_array(get_linux_distro_id(), $ids, true)) {
+        return true;
+    }
+
+    foreach (explode(' ', get_linux_distro_id_like()) as $id) {
+        if (in_array($id, $ids, true)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function is_debian_like(): bool
+{
+    return linux_distro_matches(['debian', 'ubuntu', 'linuxmint', 'pop', 'popos', 'elementary', 'raspbian', 'kali', 'zorin', 'neon']);
+}
+
+function is_arch_like(): bool
+{
+    return linux_distro_matches(['arch', 'archarm', 'endeavouros', 'manjaro', 'cachyos']);
+}
+
+function is_rhel_like(): bool
+{
+    return linux_distro_matches(['fedora', 'rhel', 'centos', 'rocky', 'almalinux', 'ol', 'amzn']);
+}
+
+function is_suse_like(): bool
+{
+    return linux_distro_matches(['suse', 'opensuse', 'opensuse-leap', 'opensuse-tumbleweed', 'sled', 'sles']);
+}
+
+function get_lando_ca_path(): ?string
+{
+    $home = getenv('HOME') ?: (string) ($_SERVER['HOME'] ?? '');
+    $path = $home . '/.lando/certs/LandoCA.crt';
+
+    return is_file($path) ? $path : null;
+}
+
+function linux_cert_anchor_plan(): array
+{
+    if (is_debian_like()) {
+        return [
+            'family' => 'debian',
+            'dest'   => '/usr/local/share/ca-certificates/lndo-site-ca.crt',
+            'update' => 'sudo update-ca-certificates',
+        ];
+    }
+
+    if (is_arch_like()) {
+        return [
+            'family' => 'arch',
+            'dest'   => '/etc/ca-certificates/trust-source/anchors/lndo-site-ca.crt',
+            'update' => 'sudo trust extract-compat',
+        ];
+    }
+
+    if (is_rhel_like()) {
+        return [
+            'family' => 'rhel',
+            'dest'   => '/etc/pki/ca-trust/source/anchors/lndo-site-ca.crt',
+            'update' => 'sudo update-ca-trust',
+        ];
+    }
+
+    if (is_suse_like()) {
+        return [
+            'family' => 'suse',
+            'dest'   => '/etc/pki/trust/anchors/lndo-site-ca.crt',
+            'update' => 'sudo update-ca-certificates',
+        ];
+    }
+
+    return ['family' => 'unknown', 'dest' => null, 'update' => null];
+}
+
+function detect_platform_label(): string
+{
+    if (is_macos()) {
+        return 'macOS';
+    }
+
+    if (is_wsl()) {
+        return 'WSL2 (Linux inside Windows)';
+    }
+
+    $id = get_linux_distro_id();
+
+    return $id !== '' ? ucfirst($id) . ' (Linux)' : 'Linux';
+}
+
+function get_nssdb_path(): ?string
+{
+    if (!command_exists('certutil')) {
+        return null;
+    }
+
+    $home = getenv('HOME') ?: (string) ($_SERVER['HOME'] ?? '');
+    $db   = $home . '/.pki/nssdb';
+
+    return is_dir($db) ? $db : null;
+}
+
+function is_ca_in_nss(string $db, string $nickname): bool
+{
+    $result = run_host_command('certutil -d sql:' . escapeshellarg($db) . ' -L -n ' . escapeshellarg($nickname));
+
+    return $result['exit'] === 0;
+}
+
+function get_cert_install_plan(): ?array
+{
+    $caPath = get_lando_ca_path();
+    if ($caPath === null) {
+        return null;
+    }
+
+    $plan = [
+        'ca'        => $caPath,
+        'label'     => detect_platform_label(),
+        'dest'      => null,
+        'status_ok' => null,
+        'commands'  => [],
+    ];
+
+    if (is_macos()) {
+        $plan['status_ok'] = run_host_command('security find-certificate -c Lando /Library/Keychains/System.keychain')['exit'] === 0;
+        $plan['commands'][] = [
+            'label' => 'Add the Lando CA to the System keychain',
+            'cmd'   => 'sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ' . escapeshellarg($caPath),
+        ];
+        $plan['note'] = 'Restart the browser after installing.';
+
+        return $plan;
+    }
+
+    if (is_wsl()) {
+        $plan['note'] = "Browsers on Windows/WSL2 read the Windows certificate store. Lando normally installs\n"
+            . "its CA there automatically. If the warning persists, open the .crt through the \\\\wsl$ share\n"
+            . "in Windows Explorer and choose 'Install Certificate...' → Current User → Trusted Root.";
+
+        return $plan;
+    }
+
+    $linux = linux_cert_anchor_plan();
+    if ($linux['family'] === 'unknown') {
+        $plan['note'] = "Distro not recognized (ID=" . get_linux_distro_id() . ", ID_LIKE=" . get_linux_distro_id_like() . ").\n"
+            . "No automatic install — add LandoCA.crt to your distro's CA anchors manually.";
+
+        return $plan;
+    }
+
+    $plan['dest']      = $linux['dest'];
+    $plan['status_ok'] = is_file($plan['dest']);
+    $plan['commands'][] = [
+        'label' => 'Copy the Lando CA into the system anchors',
+        'cmd'   => 'sudo cp ' . escapeshellarg($caPath) . ' ' . $plan['dest'],
+        'skip'  => $plan['status_ok'],
+    ];
+    $plan['commands'][] = [
+        'label' => 'Refresh the system trust store',
+        'cmd'   => $linux['update'],
+        'skip'  => $plan['status_ok'],
+    ];
+
+    $nssDb = get_nssdb_path();
+    if ($nssDb !== null) {
+        $nssInstalled = is_ca_in_nss($nssDb, 'Lando Development CA');
+        $plan['nss'] = [
+            'db'        => $nssDb,
+            'installed' => $nssInstalled,
+        ];
+        $plan['commands'][] = [
+            'label' => 'Add the Lando CA to the browser NSS database (Chromium/Edge)',
+            'cmd'   => 'certutil -d sql:' . escapeshellarg($nssDb) . ' -D -n "Lando Development CA" 2>/dev/null; certutil -d sql:' . escapeshellarg($nssDb) . ' -A -t "C,," -n "Lando Development CA" -i ' . escapeshellarg($caPath),
+            'skip'  => $nssInstalled,
+        ];
+    } else {
+        $plan['nss'] = ['db' => null, 'installed' => null];
+    }
+
+    $plan['note'] = 'Restart the browser after installing. Chromium/Edge read the NSS database (added automatically), '
+        . 'but Firefox keeps its own certificate store — import LandoCA.crt manually under '
+        . 'Settings → Privacy & Security → Certificates → View Certificates → Authorities.';
+
+    return $plan;
+}
+
 function box(string $title): void
 {
     $width    = 42;

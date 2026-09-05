@@ -49,6 +49,24 @@ lando logs -s appserver
 
 ---
 
+## Browser says "not secure" on `https://*.lndo.site`
+
+Symptom: opening the site shows a **red "not secure"** warning, because the site uses Lando's development certificate signed by its own CA (`~/.lando/certs/LandoCA.crt`), and your browser does not trust it yet.
+
+**Fix — trust the Lando CA on the host:**
+
+```bash
+lenv cert
+```
+
+This installs the CA into your system trust store (prompts for the `sudo` password) so the browser validates `https://*.lndo.site`. Check with `lenv cert status`, then **restart your browser**.
+
+- **Debian / Ubuntu / Mint** — uses `update-ca-certificates`; **Arch / Manjaro**, **Fedora / RHEL**, and **openSUSE** are detected and handled with the right commands. On Linux, Chromium/Edge read the browser NSS database (`~/.pki/nssdb`), which `lenv cert` also updates automatically — then **restart the browser**.
+- **Firefox** — uses its own certificate store. Import `LandoCA.crt` manually under Settings → Privacy & Security → Certificates → View Certificates → Authorities.
+- **Windows + WSL2** — browsers read the Windows certificate store; Lando normally installs its CA there automatically. If the warning persists, open `LandoCA.crt` via the `\\wsl$` share and install it into **Current User → Trusted Root Certificate Authorities**.
+
+---
+
 ## Database `1045 Access denied` after `lando rebuild`
 
 Symptom: `lando wp-install`, phpMyAdmin healthcheck, or `lando start` fails with:
